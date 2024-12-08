@@ -118,7 +118,6 @@ public:
 	virtual bool GetButtonOnce(GamepadButton button) = 0;
 	virtual bool GetKey(Key key) = 0;
 	virtual bool GetKeyOnce(Key key) = 0;
-	virtual bool GetMouse() = 0;
 	virtual bool GetMouseButton(MouseButton button) = 0;
 	virtual bool GetMouseButtonOnce(MouseButton button) = 0;
 	virtual float GetMouseX() = 0;

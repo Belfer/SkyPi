@@ -190,6 +190,7 @@ struct PipelineImpl
     GLuint program = 0;
     GLuint vao = 0;
 
+    GraphicsHandle prevVertBuffer = INVALID_GRAPHICS_HANDLE;
     LayoutElement layoutElements[MAX_LAYOUT_ELEMS];
     u32 numElements = 0;
     u32 stride = 0;
@@ -879,14 +880,13 @@ void GraphicsOpenGLES::DestroyPipeline(const GraphicsHandle pipeline)
     s_pipelines.erase(it);
 }
 
-
 void GraphicsOpenGLES::SetPipeline(const GraphicsHandle pipeline)
 {
     auto& pipeline_impl = GetImpl(pipeline, s_pipelines);
     pipeline_impl.bufferCount = 0;
 
     glEnable(GL_CULL_FACE);
-    glFrontFace(GL_CCW);
+    glFrontFace(pipeline_impl.faceCull);
 
     pipeline_impl.depthEnable ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
     pipeline_impl.blendEnable ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
@@ -1039,13 +1039,20 @@ void GraphicsOpenGLES::SetVertexBuffers(i32 startSlot, i32 count, const Graphics
 
     for (i32 i = 0; i < count; ++i)
     {
+        const i32 slot = startSlot + i;
         const auto& buffer_impl = GetImpl(pBuffers[i], s_buffers);
+
+        // Bind the buffer
         glBindBuffer(GL_ARRAY_BUFFER, buffer_impl.handle);
 
-        u32 relativeOffset = 0;
-        for (u32 i = 0; i < pipeline_impl.numElements; ++i)
+        u32 relativeOffset = static_cast<u32>(offsets ? offsets[i] : 0);
+
+        for (u32 j = 0; j < pipeline_impl.numElements; ++j)
         {
-            const auto& elem = pipeline_impl.layoutElements[i];
+            const auto& elem = pipeline_impl.layoutElements[j];
+
+            if (elem.bufferSlot != slot)
+                continue; // Skip attributes not associated with this buffer slot
 
             if (elem.valueType == GraphicsValueType::FLOAT32)
                 glVertexAttribPointer(elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), elem.isNormalized, pipeline_impl.stride, (void*)relativeOffset);
@@ -1053,14 +1060,13 @@ void GraphicsOpenGLES::SetVertexBuffers(i32 startSlot, i32 count, const Graphics
                 glVertexAttribIPointer(elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), pipeline_impl.stride, (void*)relativeOffset);
 
             glEnableVertexAttribArray(elem.inputIndex);
-            glVertexAttribBinding(elem.inputIndex, elem.bufferSlot);
 
             relativeOffset += elem.numComponents * GetValueSize(elem.valueType);
         }
     }
 }
 
-void GraphicsOpenGLES::SetIndexBuffer(const GraphicsHandle buffer, i32)
+void GraphicsOpenGLES::SetIndexBuffer(const GraphicsHandle buffer, i32 i)
 {
     const auto& buffer_impl = GetImpl(buffer, s_buffers);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer_impl.handle);

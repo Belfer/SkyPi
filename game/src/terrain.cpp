@@ -167,10 +167,10 @@ void Terrain::Initialize()
 
         static VertexData verts[] =
         {
-            VertexData{ Vec3{-128, 0, -128}, Vec3{}, Vec3{} },
-            VertexData{ Vec3{ 128, 0, -128}, Vec3{}, Vec3{} },
-            VertexData{ Vec3{ 128, 0,  128}, Vec3{}, Vec3{} },
-            VertexData{ Vec3{-128, 0,  128}, Vec3{}, Vec3{} }
+            VertexData{ Vec3{-128, 0, -128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} },
+            VertexData{ Vec3{ 128, 0, -128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} },
+            VertexData{ Vec3{-128, 0,  128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} },
+            VertexData{ Vec3{ 128, 0,  128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} }
         };
         bufferData.dataSize = sizeof(verts);
         bufferData.pData = verts;
@@ -183,7 +183,7 @@ void Terrain::Initialize()
         bufferInfo.access = BufferAccess::WRITE;
         bufferInfo.strideBytes = 0;
 
-        static u32 indices[] = { 0, 1, 2, 2, 1, 3 };
+        static u32 indices[] = { 0, 1, 2, 3 };
         bufferData.dataSize = sizeof(indices);
         bufferData.pData = indices;
 

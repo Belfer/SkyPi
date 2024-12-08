@@ -37,3 +37,6 @@
 [submodule "extern/OpenFBX"]
 	path = extern/OpenFBX
 	url = https://github.com/nem0/OpenFBX.git
+[submodule "extern/astc-encoder"]
+	path = extern/astc-encoder
+	url = https://github.com/ARM-software/astc-encoder.git

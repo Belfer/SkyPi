@@ -53,7 +53,6 @@ public:
 	bool GetButtonOnce(GamepadButton button) override;
 	bool GetKey(Key key) override;
 	bool GetKeyOnce(Key key) override;
-	bool GetMouse() override;
 	bool GetMouseButton(MouseButton button) override;
 	bool GetMouseButtonOnce(MouseButton button) override;
 	f32 GetMouseX() override;
@@ -117,22 +116,6 @@ private:
 
 private:
 	GLFWwindow* m_pWindow = nullptr;
-
-	GLFWgamepadstate m_currGamepadState{};
-	GLFWgamepadstate m_prevGamepadState{};
-
-	static constexpr i32 nr_keys = 350;
-	bool m_currKeysDown[nr_keys]{};
-	bool m_prevKeysDown[nr_keys]{};
-	bool m_keysDownChanged[nr_keys]{};
-
-	static constexpr i32 nr_mousebuttons = 8;
-	bool m_currMouseButtonsDown[nr_mousebuttons]{};
-	bool m_prevMouseButtonsDown[nr_mousebuttons]{};
-	bool m_mouseButtonsDownChanged[nr_keys]{};
-
-	f32 m_mousePos[2]{};
-	bool m_gamepadConnected = false;
 };
 
 Window& Window::Get()
@@ -189,38 +172,27 @@ void WindowGLFW::glfw_error_callback(i32 i, const char* c)
 
 void WindowGLFW::glfw_window_size_callback(GLFWwindow* window, i32 width, i32 height)
 {
+	auto& ctx = static_cast<WindowGLFW&>(Window::Get());
 }
 
 void WindowGLFW::glfw_joystick_callback(i32 joy, i32 event)
 {
+	auto& ctx = static_cast<WindowGLFW&>(Window::Get());
 }
 
 void WindowGLFW::glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	auto& ctx = static_cast<WindowGLFW&>(Window::Get());
-
-	// get the screen-to-game scaling parameters
-	//const auto& screen_to_game = xs::configuration::get_scale_to_game(xs::device::get_width(), xs::device::get_height());
-
-	// translate the mouse position to game coordinates
-	//xs::configuration::scale_to_game(static_cast<i32>(xpos), static_cast<i32>(ypos), screen_to_game, m_mousePos[0], m_mousePos[1]);
-
-	ctx.m_mousePos[0] = (f32)xpos;
-	ctx.m_mousePos[1] = (f32)ypos;
 }
 
 void WindowGLFW::glfw_key_callback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mods)
 {
 	auto& ctx = static_cast<WindowGLFW&>(Window::Get());
-	if (action == GLFW_PRESS || action == GLFW_RELEASE)
-		ctx.m_keysDownChanged[key] = true;
 }
 
 void WindowGLFW::glfw_mousebutton_callback(GLFWwindow* window, i32 button, i32 action, i32 mods)
 {
 	auto& ctx = static_cast<WindowGLFW&>(Window::Get());
-	if (action == GLFW_PRESS || action == GLFW_RELEASE)
-		ctx.m_mouseButtonsDownChanged[button] = true;
 }
 
 bool WindowGLFW::Initialize()
@@ -334,36 +306,12 @@ void WindowGLFW::Shutdown()
 
 void WindowGLFW::PollEvents()
 {
-	//PROFILE_FUNCTION();
+	// Poll GLFW events
 	glfwPollEvents();
 
+	// Handle the ESC key to close the window
 	if (glfwGetKey(m_pWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(m_pWindow, true);
-
-	for (i32 i = 0; i < nr_keys; ++i)
-	{
-		m_prevKeysDown[i] = m_currKeysDown[i];
-		if (m_keysDownChanged[i])
-		{
-			m_currKeysDown[i] = !m_currKeysDown[i];
-			m_keysDownChanged[i] = false;
-		}
-	}
-
-	for (i32 i = 0; i < nr_mousebuttons; ++i)
-	{
-		m_prevMouseButtonsDown[i] = m_currMouseButtonsDown[i];
-		if (m_mouseButtonsDownChanged[i])
-		{
-			m_currMouseButtonsDown[i] = !m_currMouseButtonsDown[i];
-			m_mouseButtonsDownChanged[i] = false;
-		}
-	}
-
-	m_prevGamepadState = m_currGamepadState;
-
-	if (glfwJoystickPresent(0) && glfwJoystickIsGamepad(0))
-		m_gamepadConnected = glfwGetGamepadState(0, &m_currGamepadState);
 }
 
 void WindowGLFW::Display()
@@ -377,107 +325,99 @@ void WindowGLFW::Display()
 
 f32 WindowGLFW::GetAxis(GamepadAxis axis)
 {
-	if (!m_gamepadConnected) return 0.f;
-
-	i32 axis_id = i32(axis);
-	ENSURE(axis_id >= 0 && axis_id <= GLFW_GAMEPAD_AXIS_LAST);
-	return static_cast<f32>(m_currGamepadState.axes[axis_id]);
+	FAIL("TODO: Implement");
+	return 0;
 }
 
 bool WindowGLFW::GetButton(GamepadButton button)
 {
-	if (!m_gamepadConnected) return false;
-
-	i32 button_id = i32(button);
-	ENSURE(button_id >= 0 && button_id <= GLFW_GAMEPAD_BUTTON_LAST);
-	return static_cast<bool>(m_currGamepadState.buttons[button_id]);
+	FAIL("TODO: Implement");
+	return false;
 }
 
 bool WindowGLFW::GetButtonOnce(GamepadButton button)
 {
-	if (!m_gamepadConnected) return false;
-
-	i32 button_id = i32(button);
-	ENSURE(button_id >= 0 && button_id <= GLFW_GAMEPAD_BUTTON_LAST);
-	return
-		!static_cast<bool>(m_prevGamepadState.buttons[button_id]) &&
-		static_cast<bool>(m_currGamepadState.buttons[button_id]);
+	FAIL("TODO: Implement");
+	return false;
 }
 
 bool WindowGLFW::GetKey(Key key)
 {
 	ENSURE(key >= GLFW_KEY_SPACE && key <= GLFW_KEY_LAST);
-	// TODO: CD: In the future with our custom containers we can have an overload that indexes with enum values so the conversion isn't needed
-	return m_currKeysDown[Enum::as_value(key)];
+	return glfwGetKey(m_pWindow, Enum::as_value(key)) == GLFW_PRESS;
 }
 
 bool WindowGLFW::GetKeyOnce(Key key)
 {
-	ENSURE(key >= GLFW_KEY_SPACE && key <= GLFW_KEY_LAST);
-	// TODO: CD: In the future with our custom containers we can have an overload that indexes with enum values so the conversion isn't needed
-	return m_currKeysDown[Enum::as_value(key)] && !m_prevKeysDown[Enum::as_value(key)];
-}
-
-bool WindowGLFW::GetMouse()
-{
-	return true;
+	FAIL("TODO: Implement");
+	return false;
 }
 
 bool WindowGLFW::GetMouseButton(MouseButton button)
 {
-	// TODO: CD: In the future with our custom containers we can have an overload that indexes with enum values so the conversion isn't needed
-	return m_currMouseButtonsDown[Enum::as_value(button)];
+	return glfwGetMouseButton(m_pWindow, Enum::as_value(button)) == GLFW_PRESS;
 }
 
 bool WindowGLFW::GetMouseButtonOnce(MouseButton button)
 {
-	// TODO: CD: In the future with our custom containers we can have an overload that indexes with enum values so the conversion isn't needed
-	return m_currMouseButtonsDown[Enum::as_value(button)] && !m_prevMouseButtonsDown[Enum::as_value(button)];
+	FAIL("TODO: Implement");
+	return false;
 }
 
 f32 WindowGLFW::GetMouseX()
 {
-	return m_mousePos[0];
+	f64 x, y;
+	glfwGetCursorPos(m_pWindow, &x, &y);
+	return (f32)x;
 }
 
 f32 WindowGLFW::GetMouseY()
 {
-	return m_mousePos[1];
+	f64 x, y;
+	glfwGetCursorPos(m_pWindow, &x, &y);
+	return (f32)y;
 }
 
 i32 WindowGLFW::GetNumTouches()
 {
+	FAIL("TODO: Implement");
 	return 0;
 }
 
 i32 WindowGLFW::GetTouchId(i32 index)
 {
+	FAIL("TODO: Implement");
 	return 0;
 }
 
 f32 WindowGLFW::GetTouchX(i32 index)
 {
+	FAIL("TODO: Implement");
 	return 0;
 }
 
 f32 WindowGLFW::GetTouchY(i32 index)
 {
+	FAIL("TODO: Implement");
 	return 0;
 }
 
 void WindowGLFW::SetPadVibration(i32 leftRumble, i32 rightRumble)
 {
-	// Unimplemented on the PC
+	// Unimplemented on the PC?
+	FAIL("TODO: Implement");
 }
 
 void WindowGLFW::SetPadLightbarColor(f32 r, f32 g, f32 b)
 {
-	// Unimplemented on the PC (specific dualshock 5 controller mechanic)
+	// Unimplemented on the PC? (specific dualshock 5 controller mechanic)
+	FAIL("TODO: Implement");
 }
 
 void WindowGLFW::ResetPadLightbarColor()
 {
-	// Unimplemented on the PC (specific dualshock 5 controller mechanic)
+	// Unimplemented on the PC? (specific dualshock 5 controller mechanic)
+	FAIL("TODO: Implement");
 }
 
 GLFWwindow* WindowGLFW::GetWindowPtr() const

@@ -3,10 +3,19 @@
 precision mediump float;
 #endif
 
+struct VertexOutput
+{
+    vec3 position;
+    vec3 normal;
+    vec3 tangent;
+    vec4 color;
+    vec4 light;
+};
+
 #ifdef VERTEX
-layout (location = 0) in vec3 Position;
-layout (location = 1) in vec3 Normal;
-layout (location = 2) in vec3 Tangent;
+layout (location = 0) in vec3 v_position;
+layout (location = 1) in vec3 v_normal;
+layout (location = 2) in vec3 v_tangent;
 
 layout (std140) uniform ConstantBuffer
 {
@@ -15,58 +24,52 @@ layout (std140) uniform ConstantBuffer
 
 layout (std140) uniform DrawBuffer
 {
-    vec4 Color;
-    vec4 Light;
+    vec4 color;
+    vec4 light;
 };
 
-out VertexOutput
-{
-    vec3 Position;
-    vec3 Normal;
-    vec3 Tangent;
-    vec4 Color;
-    vec4 Light;
-} FragData;
+out VertexOutput io;
 
 void main()
 {
-    vec4 WorldPosition = vec4(Position, 1.0);
+    vec4 WorldPosition = vec4(v_position, 1.0);
     gl_Position = ViewProjMtx * WorldPosition;
 
-    FragData.Position = WorldPosition.xyz;
-    FragData.Normal = Normal;
-    FragData.Tangent = Tangent;
-    FragData.Color = Color;
-    FragData.Light = Light;
+    io.position = WorldPosition.xyz;
+    io.normal = v_normal;
+    io.tangent = v_tangent;
+    io.color = color;
+    io.light = light;
 }
 #endif
 
 #ifdef PIXEL
 layout (location = 0) out vec4 Out_Color;
 
-in VertexOutput
-{
-    vec3 Position;
-    vec3 Normal;
-    vec3 Tangent;
-    vec4 Color;
-    vec4 Light;
-} FragData;
+in VertexOutput io;
 
 uniform sampler2D Albedo;
 
 void main()
 {
-    float diffuse = FragData.Light.w * max(0.0, dot(FragData.Normal, -FragData.Light.xyz));
-    vec4 albedo = texture(Albedo, FragData.Position.xz * 0.05);
+    vec3 N = normalize(io.normal);
+    vec3 Ld = normalize(-io.light.xyz);
+    float Li = io.light.w;
 
-    vec3 color = FragData.Color.rgb * albedo.rgb * diffuse;
-    float alpha = FragData.Color.a * albedo.a;
+    float diffuse = Li * max(0.0, dot(N, Ld));
+
+    vec2 uv = io.position.xz * 0.05;
+    vec4 albedo = texture(Albedo, uv);
+
+    vec3 color = io.color.rgb * albedo.rgb * diffuse;
+    float alpha = io.color.a * albedo.a;
     Out_Color = vec4(color, alpha);
 
     //Out_Color = vec4(1);
-    //Out_Color = texture(Albedo, FragData.Position.xz);
-    //Out_Color = vec4(FragData.UV, 0, 1);
-    //Out_Color = vec4(FragData.Normal * 0.5 + 0.5, 1);
+    //Out_Color = vec4(uv, 0, 1);
+    //Out_Color = vec4(N * 0.5 + 0.5, 1);
+    //Out_Color = vec4(vec3(diffuse), 1);
+    //Out_Color = albedo;
+    //Out_Color = io.color;
 }
 #endif

@@ -36,10 +36,12 @@ add_subdirectory (extern)
 
 set (ENGINE_SRCS
 	"src/engine/application.cpp"
+	"src/engine/graphics.cpp"
 	"src/engine/log.cpp"
 	"src/engine/math.cpp"
+	"src/engine/profiler.cpp"
+	"src/engine/uuid.cpp"
 	"src/engine/window.cpp"
-	"src/engine/graphics.cpp"
 )
 
 set (ENGINE_LIBS fmt stb glm wren)
