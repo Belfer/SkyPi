@@ -1,7 +1,6 @@
-#ifdef WINDOW_GLFW_BACKEND
 #include <engine/window.hpp>
 #include <engine/log.hpp>
-#include <engine/enum.hpp>
+//#include <engine/enum.hpp>
 #include <engine/macros.hpp>
 
 #include <stdlib.h>
@@ -15,6 +14,11 @@
 //}
 
 #include <GLFW/glfw3.h>
+
+#ifdef EDITOR_BUILD
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#endif
 
 class WindowGLFW final : public Window
 {
@@ -64,10 +68,41 @@ public:
 
 	WindowGLProc GetProcAddress(const char* name) override;
 
-	bool InitializeImGui() override { return true; }
-	void ShutdownImGui() override {}
-	void NewFrameImGui() override {}
-	void EndFrameImGui() override {}
+#ifdef EDITOR_BUILD
+	bool InitializeImGui() override
+	{
+#if defined(GRAPHICS_OPENGL_BACKEND) || defined(GRAPHICS_OPENGLES_BACKEND)
+		if (!ImGui_ImplGlfw_InitForOpenGL(m_pWindow, true))
+#endif
+		{
+			LOGE(Window, "Failed to initialize ImGui GLFW backend!");
+			return false;
+		}
+		return true;
+	}
+
+	void ShutdownImGui() override
+	{
+		ImGui_ImplGlfw_Shutdown();
+	}
+
+	void NewFrameImGui() override
+	{
+		ImGui_ImplGlfw_NewFrame();
+	}
+
+	void EndFrameImGui() override
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			GLFWwindow* backup_current_context = glfwGetCurrentContext();
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+			glfwMakeContextCurrent(backup_current_context);
+		}
+	}
+#endif
 
 public:
 	GLFWwindow* GetWindowPtr() const;
@@ -156,7 +191,9 @@ void WindowGLFW::glfw_window_size_callback(GLFWwindow* window, int width, int he
 {
 }
 
-void WindowGLFW::glfw_joystick_callback(int joy, int event) {}
+void WindowGLFW::glfw_joystick_callback(int joy, int event)
+{
+}
 
 void WindowGLFW::glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
@@ -170,7 +207,7 @@ void WindowGLFW::glfw_cursor_position_callback(GLFWwindow* window, double xpos, 
 
 	ctx.m_mousePos[0] = (float)xpos;
 	ctx.m_mousePos[1] = (float)ypos;
-	}
+}
 
 void WindowGLFW::glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -209,7 +246,7 @@ bool WindowGLFW::Initialize()
 
 	GLFWmonitor* pMonitor = nullptr;
 
-#ifdef GRAPHICS_OPENGL_BACKEND
+#if defined(GRAPHICS_OPENGL_BACKEND) || defined(GRAPHICS_OPENGLES_BACKEND)
 
 #if defined DEBUG_BUILD || defined EDITOR_BUILD
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
@@ -217,7 +254,7 @@ bool WindowGLFW::Initialize()
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_FALSE);
 #endif
 
-#ifdef WIN32
+#ifdef GRAPHICS_OPENGL_BACKEND
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
@@ -226,7 +263,7 @@ bool WindowGLFW::Initialize()
 
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
-#elif defined __arm__
+#elif defined GRAPHICS_OPENGLES_BACKEND
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
@@ -264,11 +301,11 @@ bool WindowGLFW::Initialize()
 
 	glfwSetWindowSizeCallback(m_pWindow, glfw_window_size_callback);
 
-#ifdef GRAPHICS_OPENGL_BACKEND
+#if defined(GRAPHICS_OPENGL_BACKEND) || defined(GRAPHICS_OPENGLES_BACKEND)
 	glfwMakeContextCurrent(m_pWindow);
 	glfwSwapInterval(1);
 
-#elif defined GRAPHICS_VULKAN_BACKEND
+#elif defined(GRAPHICS_VULKAN_BACKEND)
 	if (!glfwVulkanSupported())
 	{
 		LOGE(Window, "GLFW: Vulkan Not Supported!");
@@ -288,6 +325,8 @@ void WindowGLFW::Shutdown()
 {
 	glfwSetJoystickCallback(NULL);
 	glfwSetCursorPosCallback(m_pWindow, NULL);
+	glfwSetKeyCallback(m_pWindow, NULL);
+	glfwSetMouseButtonCallback(m_pWindow, NULL);
 
 	glfwDestroyWindow(m_pWindow);
 	glfwTerminate();
@@ -331,7 +370,7 @@ void WindowGLFW::Display()
 {
 	//PROFILE_FUNCTION();
 
-#ifdef GRAPHICS_OPENGL_BACKEND
+#if defined(GRAPHICS_OPENGL_BACKEND) || defined(GRAPHICS_OPENGLES_BACKEND)
 	glfwSwapBuffers(m_pWindow);
 #endif
 }
@@ -367,16 +406,16 @@ bool WindowGLFW::GetButtonOnce(GamepadButton button)
 
 bool WindowGLFW::GetKey(Key key)
 {
-	ENSURE(key >= GLFW_KEY_SPACE && key <= GLFW_KEY_LAST);
+	//ENSURE(key >= GLFW_KEY_SPACE && key <= GLFW_KEY_LAST);
 	// TODO: CD: In the future with our custom containers we can have an overload that indexes with enum values so the conversion isn't needed
-	return m_currKeysDown[Enum::as_value(key)];
+	return m_currKeysDown[(i32)key];// Enum::as_value(key)];
 }
 
 bool WindowGLFW::GetKeyOnce(Key key)
 {
 	//BX_ENSURE(key >= GLFW_KEY_SPACE && key <= GLFW_KEY_LAST);
 	// TODO: CD: In the future with our custom containers we can have an overload that indexes with enum values so the conversion isn't needed
-	return m_currKeysDown[Enum::as_value(key)] && !m_prevKeysDown[Enum::as_value(key)];
+	return m_currKeysDown[(i32)key] && !m_prevKeysDown[(i32)key];// Enum::as_value(key)] && !m_prevKeysDown[Enum::as_value(key)];
 }
 
 bool WindowGLFW::GetMouse()
@@ -443,5 +482,3 @@ GLFWwindow* WindowGLFW::GetWindowPtr() const
 {
 	return m_pWindow;
 }
-
-#endif // WINDOW_GLFW_BACKEND

@@ -133,9 +133,11 @@ public:
 
 	virtual WindowGLProc GetProcAddress(const char* name) = 0;
 
+#ifdef EDITOR_BUILD
 	// ImGui calls (tmp solution until imgui is fully done via interface)
 	virtual bool InitializeImGui() = 0;
 	virtual void ShutdownImGui() = 0;
 	virtual void NewFrameImGui() = 0;
 	virtual void EndFrameImGui() = 0;
+#endif
 };

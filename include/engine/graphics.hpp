@@ -198,9 +198,11 @@ public:
 	virtual void Draw(const DrawAttribs& attribs) = 0;
 	virtual void DrawIndexed(const DrawIndexedAttribs& attribs) = 0;
 
+#ifdef EDITOR_BUILD
 	// ImGui calls (tmp solution until imgui is fully done via interface)
 	virtual bool InitializeImGui() = 0;
 	virtual void ShutdownImGui() = 0;
 	virtual void NewFrameImGui() = 0;
 	virtual void EndFrameImGui() = 0;
+#endif
 };

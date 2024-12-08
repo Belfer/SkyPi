@@ -1,8 +1,7 @@
-#ifdef GRAPHICS_OPENGL_BACKEND
 #include <engine/graphics.hpp>
 
 #include <engine/macros.hpp>
-#include <engine/enum.hpp>
+//#include <engine/enum.hpp>
 #include <engine/string.hpp>
 #include <engine/hash_map.hpp>
 #include <engine/window.hpp>
@@ -17,13 +16,12 @@
 
 #include <glad/glad.h>
 
-#ifdef GRAPHICS_OPENGL_BACKEND
-#define GLSL_VERSION "#version 460 core\n"
+#ifdef EDITOR_BUILD
+#include <imgui.h>
+#include <backends/imgui_impl_opengl3.h>
 #endif
 
-#ifdef GRAPHICS_OPENGLES_BACKEND
-#define GLSL_VERSION "#version 310 es\n"
-#endif
+#define GLSL_VERSION "#version 460 core\n"
 
 #define GLSL_VERT_SHADER GLSL_VERSION "#define VERTEX\n"
 #define GLSL_FRAG_SHADER GLSL_VERSION "#define PIXEL\n"
@@ -103,10 +101,33 @@ public:
     void Draw(const DrawAttribs& attribs) override;
     void DrawIndexed(const DrawIndexedAttribs& attribs) override;
 
-    bool InitializeImGui() override { return true; }
-    void ShutdownImGui() override {}
-    void NewFrameImGui() override {}
-    void EndFrameImGui() override {}
+#ifdef EDITOR_BUILD
+    bool InitializeImGui() override
+    {
+        ImGui_ImplOpenGL3_Init("#version 430 core");
+        return true;
+    }
+
+    void ShutdownImGui() override
+    {
+        ImGui_ImplOpenGL3_Shutdown();
+    }
+
+    void NewFrameImGui() override
+    {
+        ImGui_ImplOpenGL3_NewFrame();
+    }
+
+    void EndFrameImGui() override
+    {
+        ImGui::Render();
+
+        //GraphicsHandle renderTarget = GetCurrentBackBufferRT();
+        //GraphicsHandle depthStencil = GetDepthBuffer();
+        //SetRenderTarget(renderTarget, depthStencil);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+#endif
 
 public:
     u32 GetTextureHandle(GraphicsHandle texture);
@@ -288,7 +309,6 @@ static bool InitializeGlDebug()
     LOGD(Graphics, "Renderer: {}", (const char*)renderer);
     LOGD(Graphics, "OpenGL version supported: {}", (const char*)version);
 
-#if defined GRAPHICS_OPENGL_BACKEND
     i32 flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
@@ -301,20 +321,6 @@ static bool InitializeGlDebug()
 
         return true;
     }
-#elif defined GRAPHICS_OPENGLES_BACKEND
-    //i32 flags;
-    //glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-    //if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
-    {
-        // Initialize debug output
-        //glEnable(GL_DEBUG_OUTPUT);
-        //glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        //glDebugMessageCallback(glDebugOutput, nullptr);
-        //glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-
-        return true;
-    }
-#endif
 
     return false;
 }
@@ -393,88 +399,74 @@ static bool LinkProgram(GLuint program)
     return status != 0;
 }
 
-static bool InitializeDebugDraw()
-{
-    glCreateVertexArrays(1, &g_debugVao);
-    glCreateBuffers(1, &g_debugVbo);
+//static bool InitializeDebugDraw()
+//{
+//    glCreateVertexArrays(1, &g_debugVao);
+//    glCreateBuffers(1, &g_debugVbo);
+//
+//    glVertexArrayAttribFormat(g_debugVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+//    glEnableVertexArrayAttrib(g_debugVao, 0);
+//    glVertexArrayAttribBinding(g_debugVao, 0, 0);
+//
+//    glVertexArrayAttribFormat(g_debugVao, 1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vec3));
+//    glEnableVertexArrayAttrib(g_debugVao, 1);
+//    glVertexArrayAttribBinding(g_debugVao, 1, 0);
+//
+//    static const char* vsrc = GLSL_VERSION
+//        "layout (location = 0) in vec3 Position;\n"
+//        "layout (location = 1) in vec4 Color;\n"
+//        "uniform mat4 ViewProjMtx;\n"
+//        "out vec4 Frag_Color;\n"
+//        "void main() { gl_Position = ViewProjMtx * vec4(Position, 1.0); Frag_Color = Color; }\n";
+//
+//    static const char* psrc = GLSL_VERSION
+//        "layout (location = 0) out vec4 Out_Color;\n"
+//        "in vec4 Frag_Color;\n"
+//        "void main() { Out_Color = Frag_Color; }\n";
+//
+//    GLuint vshader;
+//    if (!CompileShader(vshader, GL_VERTEX_SHADER, vsrc))
+//    {
+//        LOGE(Graphics, "Renderer failed to compile shader!");
+//        return false;
+//    }
+//
+//    GLuint pshader;
+//    if (!CompileShader(pshader, GL_FRAGMENT_SHADER, psrc))
+//    {
+//        LOGE(Graphics, "Renderer failed to compile shader!");
+//        return false;
+//    }
+//
+//    g_debugShader = glCreateProgram();
+//    glAttachShader(g_debugShader, vshader);
+//    glAttachShader(g_debugShader, pshader);
+//
+//    if (!LinkProgram(g_debugShader))
+//    {
+//        glDeleteProgram(g_debugShader);
+//        LOGE(Graphics, "Renderer failed to link shader program!");
+//        return false;
+//    }
+//
+//    glDeleteShader(vshader);
+//    glDeleteShader(pshader);
+//
+//    return true;
+//}
 
-    glVertexArrayAttribFormat(g_debugVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glEnableVertexArrayAttrib(g_debugVao, 0);
-    glVertexArrayAttribBinding(g_debugVao, 0, 0);
-
-    glVertexArrayAttribFormat(g_debugVao, 1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vec3));
-    glEnableVertexArrayAttrib(g_debugVao, 1);
-    glVertexArrayAttribBinding(g_debugVao, 1, 0);
-
-    static const char* vsrc = GLSL_VERSION
-        "layout (location = 0) in vec3 Position;\n"
-        "layout (location = 1) in vec4 Color;\n"
-        "uniform mat4 ViewProjMtx;\n"
-        "out vec4 Frag_Color;\n"
-        "void main() { gl_Position = ViewProjMtx * vec4(Position, 1.0); Frag_Color = Color; }\n";
-
-    static const char* psrc = GLSL_VERSION
-        "layout (location = 0) out vec4 Out_Color;\n"
-        "in vec4 Frag_Color;\n"
-        "void main() { Out_Color = Frag_Color; }\n";
-
-    GLuint vshader;
-    if (!CompileShader(vshader, GL_VERTEX_SHADER, vsrc))
-    {
-        LOGE(Graphics, "Renderer failed to compile shader!");
-        return false;
-    }
-
-    GLuint pshader;
-    if (!CompileShader(pshader, GL_FRAGMENT_SHADER, psrc))
-    {
-        LOGE(Graphics, "Renderer failed to compile shader!");
-        return false;
-    }
-
-    g_debugShader = glCreateProgram();
-    glAttachShader(g_debugShader, vshader);
-    glAttachShader(g_debugShader, pshader);
-
-    if (!LinkProgram(g_debugShader))
-    {
-        glDeleteProgram(g_debugShader);
-        LOGE(Graphics, "Renderer failed to link shader program!");
-        return false;
-    }
-
-    glDeleteShader(vshader);
-    glDeleteShader(pshader);
-
-    return true;
-}
-
-static void* GetProcAddress(const char* name)
+static WindowGLProc GetProcAddress(const char* name)
 {
     return Window::Get().GetProcAddress(name);
 }
 
 bool GraphicsOpenGL::Initialize()
 {
-#ifdef WINDOW_GLFW_BACKEND
-
-#ifdef GRAPHICS_OPENGL_BACKEND
     if (!gladLoadGLLoader((GLADloadproc)GetProcAddress))
     {
         LOGE(Graphics, "Failed to initialize GLAD GL!");
         return false;
     }
-#endif
-
-#ifdef GRAPHICS_OPENGLES_BACKEND
-    if (!gladLoadGLES2Loader((GLADloadproc)Window::GetProcAddress))
-    {
-        LOGE(Graphics, "Failed to initialize GLAD GLES!");
-        return false;
-    }
-#endif
-
-#endif
 
 #if defined(DEBUG_BUILD) || defined(EDITOR_BUILD)
     if (!InitializeGlDebug())
@@ -483,7 +475,7 @@ bool GraphicsOpenGL::Initialize()
     //PrintGlInfo();
 #endif
 
-    InitializeDebugDraw();
+    //InitializeDebugDraw();
 
     return true;
 }
@@ -694,8 +686,8 @@ GraphicsHandle GraphicsOpenGL::CreateTexture(const TextureInfo& info, const Buff
     glCreateSamplers(1, &texture_impl.sampler);
     glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     glCreateTextures(GL_TEXTURE_2D, 1, &texture_impl.texture);
     glTextureStorage2D(texture_impl.texture, 1, internalFormat, info.width, info.height);
@@ -711,8 +703,8 @@ GraphicsHandle GraphicsOpenGL::CreateTexture(const TextureInfo& info, const Buff
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, info.width, info.height, 0, format, type, data.pData);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -720,12 +712,12 @@ GraphicsHandle GraphicsOpenGL::CreateTexture(const TextureInfo& info, const Buff
     glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 
-    if (info.flags & TextureFlags::RENDER_TARGET)
+    if ((i32)info.flags & (i32)TextureFlags::RENDER_TARGET)
     {
         glCreateFramebuffers(1, &texture_impl.fbo);
     }
 
-    if (info.flags & TextureFlags::DEPTH_STENCIL)
+    if ((i32)info.flags & (i32)TextureFlags::DEPTH_STENCIL)
     {
         glCreateRenderbuffers(1, &texture_impl.rbo);
         glNamedRenderbufferStorage(texture_impl.rbo, internalFormat, info.width, info.height);
@@ -1095,5 +1087,3 @@ void GraphicsOpenGL::DrawIndexed(const DrawIndexedAttribs& attribs)
 //    glUseProgram(0);
 //    glBindVertexArray(0);
 //}
-
-#endif // GRAPHICS_OPENGL_BACKEND

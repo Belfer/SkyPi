@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <mutex>
+#include <thread>
 
 #define LOG(Channel, Level, ...) Log::Get().Write(fmt::format(__VA_ARGS__), #Channel, Level, __FILE__, __LINE__)
 #define LOGD(Channel, ...) LOG(Channel, LogLevel::LOG_DEBUG, __VA_ARGS__)

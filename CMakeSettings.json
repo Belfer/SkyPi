@@ -23,7 +23,7 @@
       "inheritEnvironments": [ "msvc_x64_x64" ]
     },
     {
-      "name": "Linux-Game-Debug-GCC",
+      "name": "LinuxARM-Game-Debug-GCC",
       "generator": "Ninja",
       "configurationType": "Debug",
       "cmakeExecutable": "cmake",
@@ -31,7 +31,7 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "linux_x64" ],
+      "inheritEnvironments": [ "linux_arm" ],
       "remoteMachineName": "${defaultRemoteMachineName}",
       "remoteCMakeListsRoot": "$HOME/.vs/${projectDirName}/${workspaceHash}/src",
       "remoteBuildRoot": "$HOME/.vs/${projectDirName}/${workspaceHash}/out/build/${name}",
@@ -40,10 +40,16 @@
       "rsyncCommandArgs": "-t --delete",
       "remoteCopyBuildOutput": false,
       "remoteCopySourcesMethod": "rsync",
-      "variables": []
+      "variables": [
+        {
+          "name": "GRAPHICS_BACKEND",
+          "value": "OpenGLES",
+          "type": "STRING"
+        }
+      ]
     },
     {
-      "name": "Linux-Game-Release-GCC",
+      "name": "LinuxARM-Game-Release-GCC",
       "generator": "Ninja",
       "configurationType": "RelWithDebInfo",
       "cmakeExecutable": "cmake",
@@ -51,7 +57,7 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "linux_x64" ],
+      "inheritEnvironments": [ "linux_arm" ],
       "remoteMachineName": "${defaultRemoteMachineName}",
       "remoteCMakeListsRoot": "$HOME/.vs/${projectDirName}/${workspaceHash}/src",
       "remoteBuildRoot": "$HOME/.vs/${projectDirName}/${workspaceHash}/out/build/${name}",
@@ -60,7 +66,13 @@
       "rsyncCommandArgs": "-t --delete",
       "remoteCopyBuildOutput": false,
       "remoteCopySourcesMethod": "rsync",
-      "variables": []
+      "variables": [
+        {
+          "name": "GRAPHICS_BACKEND",
+          "value": "OpenGLES",
+          "type": "STRING"
+        }
+      ]
     }
   ]
 }

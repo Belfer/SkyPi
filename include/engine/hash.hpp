@@ -1,5 +1,6 @@
 #pragma once
 
+#include <engine/type_traits.hpp>
 #include <engine/byte_types.hpp>
 #include <engine/string.hpp>
 
@@ -44,7 +45,10 @@ DECLARE_PRIMITIVE_HASH(i32, HashFunctions::FNV1a);
 DECLARE_PRIMITIVE_HASH(u32, HashFunctions::FNV1a);
 DECLARE_PRIMITIVE_HASH(f32, HashFunctions::FNV1a);
 DECLARE_PRIMITIVE_HASH(f64, HashFunctions::FNV1a);
-DECLARE_PRIMITIVE_HASH(SizeType, HashFunctions::FNV1a);
+
+//#if !std::is_same<SizeType, u32>::value
+//DECLARE_PRIMITIVE_HASH(SizeType, HashFunctions::FNV1a);
+//#endif
 
 template <>
 struct Hash<String>

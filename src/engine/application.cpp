@@ -3,6 +3,9 @@
 #include <engine/time.hpp>
 #include <engine/window.hpp>
 #include <engine/graphics.hpp>
+#ifdef EDITOR_BUILD
+#include <editor/editor.hpp>
+#endif
 
 Application& Application::Get() noexcept
 {
@@ -41,6 +44,9 @@ int Application::Run(int argc, char** args, Game& game)
 
         Graphics::Get().NewFrame();
         game.Render();
+#ifdef EDITOR_BUILD
+        EditorManager::Get().OnGui();
+#endif
         Graphics::Get().EndFrame();
 
         Window::Get().Display();
@@ -69,6 +75,14 @@ bool Application::Initialize() noexcept
         return false;
     }
 
+#ifdef EDITOR_BUILD
+    if (!EditorManager::Get().Initialize())
+    {
+        LOGE(Core, "Failed to initialize editor manager!");
+        return false;
+    }
+#endif
+
     LOGD(Core, "Application initialized successfully.");
     return true;
 }
@@ -76,6 +90,10 @@ bool Application::Initialize() noexcept
 void Application::Shutdown() noexcept
 {
     LOGD(Core, "Shutting down application...");
+
+#ifdef EDITOR_BUILD
+    EditorManager::Get().Shutdown();
+#endif
 
     Graphics::Get().Shutdown();
     Window::Get().Shutdown();

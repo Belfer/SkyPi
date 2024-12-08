@@ -18,22 +18,22 @@ void Log::Write(StringView message,
 	std::function<void()>&& onClick)
 {
 	static Hash<StringView> svHash;
-	SizeType channelHash = svHash(channel.data());
-
-	char formattedMessage[1024];
-	char* out = formattedMessage;
-	
 	static Hash<std::thread::id> tidHash;
-	if (std::this_thread::get_id() != m_mainThreadId)
-	{
-		out = fmt::format_to(out, "[Thread {}] ", tidHash(std::this_thread::get_id()));
-	}
+	static CString<2048> formattedMessage;
 
-	out = fmt::format_to(out, "{} ({}): {}", File::GetFilename(file), line, message);
-	*out = '\0';
+	SizeType channelHash = svHash(channel.data());
 
 	m_mutex.lock();
 	//++mNumOfEntriesPerSeverity[static_cast<int>(severity)];
+
+	if (std::this_thread::get_id() != m_mainThreadId)
+	{
+		formattedMessage.format("[Thread {}] {} ({}): {}", tidHash(std::this_thread::get_id()), File::GetFilename(file), line, message);
+	}
+	else
+	{
+		formattedMessage.format("{} ({}): {}", File::GetFilename(file), line, message);
+	}
 
 	auto existingChannel = m_channels.find(channelHash);
 	if (existingChannel == m_channels.end())
