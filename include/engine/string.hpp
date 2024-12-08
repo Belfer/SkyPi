@@ -9,8 +9,6 @@
 #include <stdexcept>
 #include <algorithm>
 
-#define CONSTEXPR
-
 using String = std::string;
 
 template <SizeType N>
@@ -56,6 +54,11 @@ public:
     SizeType length() const
     {
         return std::strlen(m_data);
+    }
+
+    SizeType size() const
+    {
+        return N;
     }
 
     bool empty() const
@@ -221,14 +224,14 @@ private:
 class StringView
 {
 public:
-    CONSTEXPR StringView() noexcept : m_pData(nullptr), m_size(0) {}
+    constexpr StringView() noexcept : m_pData(nullptr), m_size(0) {}
 
-    CONSTEXPR StringView(const char* str) noexcept
+    constexpr StringView(const char* str) noexcept
         : m_pData(str)
         , m_size(str ? std::strlen(str) : 0)
     {}
 
-    CONSTEXPR StringView(const char* str, SizeType len) noexcept
+    constexpr StringView(const char* str, SizeType len) noexcept
         : m_pData(str)
         , m_size(len)
     {}
@@ -238,22 +241,27 @@ public:
         , m_size(str.size())
     {}
 
-    CONSTEXPR const char& operator[](SizeType pos) const noexcept
+    constexpr const char& operator[](SizeType pos) const noexcept
     {
         return m_pData[pos];
     }
 
-    CONSTEXPR const char* data() const noexcept
+    constexpr const char* data() const noexcept
     {
         return m_pData;
     }
 
-    CONSTEXPR SizeType size() const noexcept
+    constexpr SizeType length() const noexcept
     {
         return m_size;
     }
 
-    CONSTEXPR bool empty() const noexcept
+    constexpr SizeType size() const noexcept
+    {
+        return m_size;
+    }
+
+    constexpr bool empty() const noexcept
     {
         return m_size == 0;
     }
@@ -263,7 +271,7 @@ public:
         return String(m_pData, m_size);
     }
 
-    CONSTEXPR SizeType find_last_of(const char* chars) const noexcept
+    /*constexpr*/ SizeType find_last_of(const char* chars) const noexcept
     {
         for (SizeType i = m_size; i > 0; --i) {
             if (std::strchr(chars, m_pData[i - 1])) {
@@ -273,7 +281,7 @@ public:
         return npos;
     }
 
-    CONSTEXPR StringView substr(SizeType pos, SizeType count = npos) const noexcept
+    /*constexpr*/ StringView substr(SizeType pos, SizeType count = npos) const noexcept
     {
         if (pos > m_size)
             return StringView();  // Out of bounds
@@ -281,27 +289,11 @@ public:
         return StringView(m_pData + pos, (count > m_size - pos) ? (m_size - pos) : count);
     }
 
-private:
-    template <typename T>
-    static int compare_impl(const T& lhs, const T& rhs, SizeType len, std::false_type /*is_runtime*/)
-    {
-        return std::memcmp(lhs, rhs, len);
-    }
-
-    template <typename T>
-    static CONSTEXPR int compare_impl(const T& lhs, const T& rhs, SizeType len, std::true_type /*is_compiletime*/)
-    {
-        for (SizeType i = 0; i < len; ++i)
-            if (lhs[i] != rhs[i])
-                return static_cast<int>(lhs[i]) - static_cast<int>(rhs[i]);
-        return 0;
-    }
-
 public:
-    CONSTEXPR int compare(const StringView& other) const noexcept
+    /*constexpr*/ int compare(const StringView& other) const noexcept
     {
         const SizeType min_len = m_size < other.m_size ? m_size : other.m_size;
-        const int result = compare_impl(m_pData, other.m_pData, min_len, std::integral_constant<bool, true>{});
+        const int result = std::memcmp(m_pData, other.m_pData, min_len);
 
         if (result != 0)
             return result;
@@ -313,12 +305,12 @@ public:
         return 0;
     }
 
-    CONSTEXPR bool operator==(const StringView& other) const noexcept
+    constexpr bool operator==(const StringView& other) const noexcept
     {
-        return m_size == other.m_size && compare_impl(m_pData, other.m_pData, m_size, std::integral_constant<bool, true>{}) == 0;
+        return m_size == other.m_size && std::memcmp(m_pData, other.m_pData, m_size) == 0;
     }
 
-    CONSTEXPR bool operator!=(const StringView& other) const noexcept
+    constexpr bool operator!=(const StringView& other) const noexcept
     {
         return !(*this == other);
     }
@@ -333,7 +325,7 @@ private:
 template <>
 struct fmt::formatter<StringView>
 {
-    CONSTEXPR auto parse(format_parse_context& ctx) -> decltype(ctx.begin())
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin())
     {
         return ctx.begin();
     }

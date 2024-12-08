@@ -55,7 +55,16 @@ struct Hash<String>
 {
 	inline SizeType operator()(const String& v) const
 	{
-		return HashFunctions::FNV1a(reinterpret_cast<const u8*>(v.data()), v.size());
+		return HashFunctions::FNV1a(reinterpret_cast<const u8*>(v.data()), v.length());
+	}
+};
+
+template <SizeType N>
+struct Hash<CString<N>>
+{
+	inline SizeType operator()(CString<N> v) const
+	{
+		return HashFunctions::FNV1a(reinterpret_cast<const u8*>(v.data()), v.length());
 	}
 };
 
@@ -64,6 +73,6 @@ struct Hash<StringView>
 {
 	inline SizeType operator()(StringView v) const
 	{
-		return HashFunctions::FNV1a(reinterpret_cast<const u8*>(v.data()), v.size());
+		return HashFunctions::FNV1a(reinterpret_cast<const u8*>(v.data()), v.length());
 	}
 };

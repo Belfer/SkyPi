@@ -1,7 +1,7 @@
 #include <engine/graphics.hpp>
 
 #include <engine/macros.hpp>
-//#include <engine/enum.hpp>
+#include <engine/enum.hpp>
 #include <engine/string.hpp>
 #include <engine/hash_map.hpp>
 #include <engine/window.hpp>
@@ -454,47 +454,98 @@ void GraphicsOpenGLES::SetRenderTarget(const GraphicsHandle renderTarget, const 
 
     const auto& renderTarget_impl = GetImpl(renderTarget, s_textures);
 
-    //GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
-    //glNamedFramebufferDrawBuffers(framebuffer, 1, drawBuffers);
-    glNamedFramebufferTexture(renderTarget_impl.fbo, GL_COLOR_ATTACHMENT0, renderTarget_impl.texture, 0);
+    // Bind the framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, renderTarget_impl.fbo);
 
+    // Attach the color texture
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTarget_impl.texture, 0);
+
+    // Attach the depth-stencil renderbuffer if specified
     if (depthStencil != INVALID_GRAPHICS_HANDLE)
     {
         const auto& depthStencil_impl = GetImpl(depthStencil, s_textures);
-        glNamedFramebufferRenderbuffer(renderTarget_impl.fbo, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencil_impl.rbo);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencil_impl.rbo);
     }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, renderTarget_impl.fbo);
 }
 
 void GraphicsOpenGLES::ReadPixels(u32 x, u32 y, u32 w, u32 h, void* pixelData, const GraphicsHandle renderTarget)
 {
     const auto& renderTarget_impl = GetImpl(renderTarget, s_textures);
 
-    glNamedFramebufferReadBuffer(renderTarget_impl.fbo, GL_COLOR_ATTACHMENT0);
+    // Bind the framebuffer for reading
+    glBindFramebuffer(GL_FRAMEBUFFER, renderTarget_impl.fbo);
+
+    // Read pixels from the framebuffer
     glReadPixels(x, y, w, h, GL_RG_INTEGER, GL_UNSIGNED_INT, pixelData);
+
+    // Unbind the framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void GraphicsOpenGLES::SetViewport(const f32 viewport[4])
 {
-    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    // Set the viewport
+    glViewport(static_cast<GLint>(viewport[0]),
+        static_cast<GLint>(viewport[1]),
+        static_cast<GLsizei>(viewport[2]),
+        static_cast<GLsizei>(viewport[3]));
 }
 
 void GraphicsOpenGLES::ClearRenderTarget(const GraphicsHandle rt, const float clearColor[4])
 {
+    if (rt != INVALID_GRAPHICS_HANDLE)
+    {
+        const auto& renderTarget_impl = GetImpl(rt, s_textures);
+        glBindFramebuffer(GL_FRAMEBUFFER, renderTarget_impl.fbo);
+    }
+    else
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    // Set the clear color
     glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+
+    // Clear the color buffer
     glClear(GL_COLOR_BUFFER_BIT);
 
-    //const float color[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    //glClearBufferfv(GL_COLOR, 0, color);
+    // Unbind the framebuffer
+    if (rt != INVALID_GRAPHICS_HANDLE)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 }
 
 void GraphicsOpenGLES::ClearDepthStencil(const GraphicsHandle dt, GraphicsClearFlags flags, float depth, int stencil)
 {
-    GLbitfield mask = GL_DEPTH_BUFFER_BIT;
+    if (dt != INVALID_GRAPHICS_HANDLE)
+    {
+        const auto& depthStencil_impl = GetImpl(dt, s_textures);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthStencil_impl.fbo);
+    }
+    else
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    // Set the depth and stencil clear values
+    glClearDepthf(depth);
+    glClearStencil(stencil);
+
+    // Clear the depth and stencil buffers based on flags
+    GLbitfield mask = 0;
+    if (flags & GraphicsClearFlags::DEPTH)
+        mask |= GL_DEPTH_BUFFER_BIT;
+    if (flags & GraphicsClearFlags::STENCIL)
+        mask |= GL_STENCIL_BUFFER_BIT;
+
     glClear(mask);
 
-    //glClearBufferfi(GL_DEPTH_STENCIL, 0, 1.0f, 0);
+    // Unbind the framebuffer
+    if (dt != INVALID_GRAPHICS_HANDLE)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 }
 
 GraphicsHandle GraphicsOpenGLES::CreateShader(const ShaderInfo& info)
@@ -630,7 +681,7 @@ GraphicsHandle GraphicsOpenGLES::CreateTexture(const TextureInfo& info, const Bu
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // Handle additional flags for render targets or depth-stencil buffers
-    if ((i32)info.flags & (i32)TextureFlags::RENDER_TARGET)
+    if (info.flags & TextureFlags::RENDER_TARGET)
     {
         glGenFramebuffers(1, &texture_impl.fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, texture_impl.fbo);
@@ -638,7 +689,7 @@ GraphicsHandle GraphicsOpenGLES::CreateTexture(const TextureInfo& info, const Bu
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    if ((i32)info.flags & (i32)TextureFlags::DEPTH_STENCIL)
+    if (info.flags & TextureFlags::DEPTH_STENCIL)
     {
         glGenRenderbuffers(1, &texture_impl.rbo);
         glBindRenderbuffer(GL_RENDERBUFFER, texture_impl.rbo);

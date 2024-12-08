@@ -74,7 +74,7 @@ void SkyPiGame::Update()
 void SkyPiGame::Render()
 {
     static f32 clearColor[] = { .4f, .6f, .9f, 1.f };
-    Graphics::Get().ClearRenderTarget(0, clearColor);
+    Graphics::Get().ClearRenderTarget(Graphics::Get().GetCurrentBackBufferRT(), clearColor);
 
     BufferData bufferData;
     bufferData.dataSize = sizeof(ConstantData);
