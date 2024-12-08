@@ -6,7 +6,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option (BUILD_EDITOR "Build as editor binaries" ON)
 option (BUILD_TESTS "Build as editor binaries" ON)
-#option (PACKAGE_RUNTIME "Install binaries" OFF)
 
 set (WINDOW_BACKEND "GLFW" CACHE STRING "Choose the window backend: GLFW")
 set_property (CACHE WINDOW_BACKEND PROPERTY STRINGS "GLFW")

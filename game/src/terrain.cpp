@@ -310,12 +310,8 @@ void Terrain::Render()
     Graphics::Get().SetVertexBuffers(0, 1, pBuffers, &offset);
     Graphics::Get().SetIndexBuffer(m_indexBuffer, 0);
 
-    //DrawIndexedAttribs attribs;
-    //attribs.indexType = GraphicsValueType::UINT32;
-    //attribs.numIndices = m_indexCount;
-    //Graphics::Get().DrawIndexed(attribs);
-
-    DrawAttribs attribs;
-    attribs.numVertices = 4;
-    Graphics::Get().Draw(attribs);
+    DrawIndexedAttribs attribs;
+    attribs.indexType = GraphicsValueType::UINT32;
+    attribs.numIndices = m_indexCount;
+    Graphics::Get().DrawIndexed(attribs);
 }
