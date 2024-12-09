@@ -9,7 +9,7 @@ set (GAME_SRCS
 if (BUILD_EDITOR)
 	set (GAME_SRCS ${GAME_SRCS}
 		"src/editor/game_editor.cpp"
-		"src/editor/terrain_editor.cpp"
+		"src/editor/terrain_view.cpp"
 	)
 endif()
 

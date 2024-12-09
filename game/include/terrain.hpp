@@ -54,6 +54,7 @@ private:
     {
         static constexpr u32 Length = 129; // A cell is 128+1 x 128+1 pixels
         static constexpr u32 ByteSize = sizeof(u16) * Length * Length;
+        using Buffer = Array<u16, ByteSize>;
 
         // Cell index
         u32 x{ 0 };
@@ -63,7 +64,7 @@ private:
         Box3 aabb{};
 
         // Height data (16bit depth)
-        Array<u16, ByteSize> data{};
+        Buffer buffer{};
 
         // Graphics handles
         GraphicsHandle vertexBuffer{ INVALID_GRAPHICS_HANDLE };
@@ -77,7 +78,7 @@ private:
     template <typename T>
 	friend class Inspector;
 
-    //InputFileStream m_fileStream{};
+    InputFileStream m_fileStream{};
 
     TerrainDrawData m_drawData{};
     GraphicsHandle m_drawBuffer{ INVALID_GRAPHICS_HANDLE };

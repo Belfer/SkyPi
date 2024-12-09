@@ -94,10 +94,10 @@ public:
     int compare(const StringView& other) const noexcept;
     constexpr bool operator==(const StringView& other) const noexcept;
     constexpr bool operator!=(const StringView& other) const noexcept;
-    constexpr bool operator<(const StringView& other) const;
-    constexpr bool operator<=(const StringView& other) const;
-    constexpr bool operator>(const StringView& other) const;
-    constexpr bool operator>=(const StringView& other) const;
+    bool operator<(const StringView& other) const;
+    bool operator<=(const StringView& other) const;
+    bool operator>(const StringView& other) const;
+    bool operator>=(const StringView& other) const;
 
 private:
     const char* m_data;
@@ -437,22 +437,22 @@ constexpr bool StringView::operator!=(const StringView& other) const noexcept
     return !(*this == other);
 }
 
-constexpr bool StringView::operator<(const StringView& other) const
+inline bool StringView::operator<(const StringView& other) const
 {
     return std::strcmp(m_data, other.m_data) < 0;
 }
 
-constexpr bool StringView::operator<=(const StringView& other) const
+inline bool StringView::operator<=(const StringView& other) const
 {
     return std::strcmp(m_data, other.m_data) <= 0;
 }
 
-constexpr bool StringView::operator>(const StringView& other) const
+inline bool StringView::operator>(const StringView& other) const
 {
     return std::strcmp(m_data, other.m_data) > 0;
 }
 
-constexpr bool StringView::operator>=(const StringView& other) const
+inline bool StringView::operator>=(const StringView& other) const
 {
     return std::strcmp(m_data, other.m_data) >= 0;
 }

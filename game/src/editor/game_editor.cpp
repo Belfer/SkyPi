@@ -1,12 +1,12 @@
 #include <editor/game_editor.hpp>
-#include <editor/terrain_editor.hpp>
+#include <editor/terrain_view.hpp>
 #include <engine/time.hpp>
 
 SkyPiEditor::SkyPiEditor()
 {
-    SetTitle("SkyPi");
-    SetPresistent(true);
-    SetExclusive(true);
+    //SetTitle("SkyPi");
+    //SetPresistent(true);
+    //SetExclusive(true);
 }
 
 void SkyPiEditor::Configure()
@@ -16,15 +16,21 @@ void SkyPiEditor::Configure()
         {
             if (ImGui::BeginMenu("File"))
             {
+                if (ImGui::MenuItem("New")) {}
+                if (ImGui::MenuItem("Open")) {}
+                ImGui::Separator();
+                if (ImGui::MenuItem("Exit")) {}
                 ImGui::EndMenu();
             }
 
             if (ImGui::BeginMenu("Edit"))
             {
+                if (ImGui::MenuItem("Undo")) {}
+                if (ImGui::MenuItem("Redo")) {}
                 ImGui::EndMenu();
             }
 
-            if (ImGui::BeginMenu("Window"))
+            if (ImGui::BeginMenu("View"))
             {
                 if (ImGui::MenuItem("Terrain"))
                     EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
@@ -33,7 +39,6 @@ void SkyPiEditor::Configure()
             }
         });
 
-    EditorManager::Get().AddEditor(meta::make_unique<SkyPiEditor>(*this));
     EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
 }
 
@@ -57,18 +62,18 @@ void SkyPiEditor::Shutdown()
     m_game.Shutdown();
 }
 
-void SkyPiEditor::OnGui()
-{
-    m_frames++;
-    m_timer += Time::Get().DeltaTime();
-    if (m_timer >= 1.f)
-    {
-        m_fps = (i32)(m_frames / m_timer);
-        m_frames = 0;
-        m_timer = Math::FMod(m_timer, 1.f);
-    }
-
-    CString<64> fps;
-    fps.format("FPS: {}", m_fps);
-    ImGui::Text(fps);
-}
+//void SkyPiEditor::OnGui()
+//{
+//    m_frames++;
+//    m_timer += Time::Get().DeltaTime();
+//    if (m_timer >= 1.f)
+//    {
+//        m_fps = (i32)(m_frames / m_timer);
+//        m_frames = 0;
+//        m_timer = Math::FMod(m_timer, 1.f);
+//    }
+//
+//    CString<64> fps;
+//    fps.format("FPS: {}", m_fps);
+//    ImGui::Text(fps);
+//}

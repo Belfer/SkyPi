@@ -3,10 +3,19 @@
 #include <memory>
 
 template <typename T>
-using SharedPtr = std::shared_ptr<T>;
+struct NoDelete
+{
+	void operator()(T* ptr) const noexcept {}
+};
 
 template <typename T>
-using UniquePtr = std::unique_ptr<T>;
+using DefaultDelete = std::default_delete<T>;
+
+template <typename T>
+using SharedPtr = std::shared_ptr<T>;
+
+template <typename T, typename Deleter = DefaultDelete<T>>
+using UniquePtr = std::unique_ptr<T, Deleter>;
 
 namespace meta
 {
@@ -14,11 +23,5 @@ namespace meta
 	UniquePtr<T> make_unique(Args&&... args)
 	{
 		return UniquePtr<T>(new T(std::forward<Args>(args)...));
-	}
-
-	template <typename T, typename... Args>
-	UniquePtr<T> make_unique(T* ptr)
-	{
-		return UniquePtr<T>(ptr);
 	}
 }

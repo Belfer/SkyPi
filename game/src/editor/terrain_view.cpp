@@ -1,4 +1,4 @@
-#include <editor/terrain_editor.hpp>
+#include <editor/terrain_view.hpp>
 #include <engine/time.hpp>
 
 Inspector<Terrain>::Inspector(Terrain& terrain)

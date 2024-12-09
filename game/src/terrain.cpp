@@ -7,21 +7,29 @@
 #include <sstream>
 #include <stdexcept>
 
-static Image LoadImage(StringView filename, bool is16bit)
+static Image LoadImage(StringView filename)
 {
     CString<512> filepath = File::GetPath(filename);
 
     Image image{};
-    if (is16bit)
+    if (stbi_is_16_bit(filepath))
     {
         image.data = (u8*)stbi_load_16(filepath, &image.width, &image.height, &image.channels, 0);
-        image.channels = 2;
+    }
+    else if (stbi_is_hdr(filepath))
+    {
+        FAIL("What to do with HDR?");
     }
     else
     {
         image.data = stbi_load(filepath, &image.width, &image.height, &image.channels, 0);
     }
     return image;
+}
+
+static void SaveImage(StringView filename, const Image& image)
+{
+    CString<512> filepath = File::GetPath(filename);
 }
 
 static void UnloadImage(const Image& image)
@@ -128,7 +136,7 @@ void Terrain::Initialize()
 
     // Create terrain texture
     {
-        Image image = LoadImage("/assets/midgard-textures/21c.png", false);
+        Image image = LoadImage("/assets/midgard-textures/21c.png");
 
         TextureInfo textureInfo;
         textureInfo.width = image.width;
@@ -210,27 +218,29 @@ void Terrain::Shutdown()
 
 void Terrain::Import(StringView srcPath, StringView dstPath)
 {
-    Image heightmap = LoadImage(srcPath, true);
+    Image heightmap = LoadImage(srcPath);
+    ENSURE(heightmap.is_16bit);
+
     OutputFileStream outFile(File::GetPath(dstPath), std::ios::binary);
 
     const i32 width = heightmap.width;
     const i32 height = heightmap.height;
     const u8* data = heightmap.data;
 
+    const u32 cellSize = Terrain::Cell::Length;
+    i32 cellsX = (width + cellSize - 1) / cellSize;
+    i32 cellsY = (height + cellSize - 1) / cellSize;
+
     // Write header
     outFile.write((char*)&width, sizeof(i32));
     outFile.write((char*)&height, sizeof(i32));
 
     // Write cells
-    const u32 cellSize = Terrain::Cell::Length;
-    i32 cellsX = (width + cellSize - 1) / cellSize;  // Ceil division
-    i32 cellsY = (height + cellSize - 1) / cellSize;
-
+    static Terrain::Cell::Buffer g_cellBuffer;
     for (i32 y = 0; y < cellsY; ++y)
     {
         for (i32 x = 0; x < cellsX; ++x)
         {
-            Array<u16, Terrain::Cell::ByteSize> cell;
             for (i32 cy = 0; cy < cellSize; ++cy)
             {
                 for (i32 cx = 0; cx < cellSize; ++cx)
@@ -239,11 +249,11 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
                     i32 globalY = y * cellSize + cy;
                     if (globalX < width && globalY < height)
                     {
-                        cell[cy * cellSize + cx] = data[globalY * width + globalX];
+                        g_cellBuffer[cy * cellSize + cx] = data[globalY * width + globalX];
                     }
                     else
                     {
-                        cell[cy * cellSize + cx] = 0; // Fill with zeros if out of bounds
+                        g_cellBuffer[cy * cellSize + cx] = 0; // Fill with zeros if out of bounds
                     }
                 }
             }
@@ -251,7 +261,7 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
             // Write size and data
             const u32 cellByteSize = Terrain::Cell::ByteSize;
             outFile.write((char*)&cellByteSize, sizeof(u32));
-            outFile.write((char*)cell.data(), cellByteSize);
+            outFile.write((char*)g_cellBuffer.data(), cellByteSize);
         }
     }
 
@@ -262,18 +272,21 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
 void Terrain::OpenStream(StringView heightmapPath)
 {
     CString<512> filepath = File::GetPath(heightmapPath);
-    //m_fileStream.open(filepath, std::ios::binary);
+    m_fileStream.open(filepath, std::ios::binary);
 }
 
 void Terrain::CloseStream()
 {
-    //m_fileStream.close();
+    m_fileStream.close();
     m_cells.clear();
 }
 
 Terrain::Cell Terrain::ReadCell(u32 x, u32 y)
 {
-    //ENSURE(m_fileStream.is_open());
+    ENSURE(m_fileStream.is_open());
+    static Terrain::Cell::Buffer g_cellBuffer;
+
+    m_fileStream.seekg(0);
 
     /*
     // Load terrain heightmap

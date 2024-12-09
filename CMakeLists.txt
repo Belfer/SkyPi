@@ -76,7 +76,7 @@ if (BUILD_EDITOR)
 		"src/editor/editor.cpp"
 		"src/editor/inspector.cpp"
 	)
-	set (ENGINE_LIBS ${ENGINE_LIBS} imgui)
+	set (ENGINE_LIBS ${ENGINE_LIBS} imgui implot ImGuizmo)
 endif()
 
 add_library (Engine STATIC ${ENGINE_SRCS})
