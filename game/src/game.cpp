@@ -73,9 +73,68 @@ void SkyPiGame::Update()
     m_constantData.viewProjMtx = m_camera.GetViewProjection();
 }
 
+static void DrawXZGrid(const Vec3& cameraPos, float zfar)
+{
+    float cameraHeight = fabs(cameraPos.y);
+
+    // Determine the current and next grid spacing
+    float currentSpacing = pow(10.0f, floor(log10(cameraHeight))); // Current nearest 10th
+    float nextSpacing = currentSpacing * 10.0f;                    // Next larger scale
+
+    // Grid extent based on zfar
+    float gridExtent = std::min(100.0f * nextSpacing, zfar);
+
+    // Colors
+    uint32_t darkGray = 0xFF444444;
+    uint32_t lightGray = 0xFF888888;
+    uint32_t nextGridGray = 0xFF666666; // Slightly lighter for the next grid
+    uint32_t red = 0xFFFF0000;
+    uint32_t green = 0xFF00FF00;
+    uint32_t blue = 0xFF0000FF;
+
+    // Draw the current grid spacing
+    for (float x = -gridExtent; x <= gridExtent; x += currentSpacing)
+    {
+        if (fabs(x) < 0.0001f) continue; // Skip the center X line to avoid overlap
+        if (fabs(x - cameraPos.x) > zfar) continue; // Skip lines outside view range
+        uint32_t colorX = fmod(fabs(x / currentSpacing), 10.0f) == 0 ? darkGray : lightGray;
+        DebugDraw::Get().Line(Vec3(x, 0, -gridExtent), Vec3(x, 0, gridExtent), colorX);
+    }
+
+    for (float z = -gridExtent; z <= gridExtent; z += currentSpacing)
+    {
+        if (fabs(z) < 0.0001f) continue; // Skip the center Z line to avoid overlap
+        if (fabs(z - cameraPos.z) > zfar) continue; // Skip lines outside view range
+        uint32_t colorZ = fmod(fabs(z / currentSpacing), 10.0f) == 0 ? darkGray : lightGray;
+        DebugDraw::Get().Line(Vec3(-gridExtent, 0, z), Vec3(gridExtent, 0, z), colorZ);
+    }
+
+    // Draw the next grid spacing
+    for (float x = -gridExtent; x <= gridExtent; x += nextSpacing)
+    {
+        if (fabs(x) < 0.0001f) continue; // Skip the center X line to avoid overlap
+        if (fabs(x - cameraPos.x) > zfar) continue; // Skip lines outside view range
+        DebugDraw::Get().Line(Vec3(x, 0, -gridExtent), Vec3(x, 0, gridExtent), nextGridGray);
+    }
+
+    for (float z = -gridExtent; z <= gridExtent; z += nextSpacing)
+    {
+        if (fabs(z) < 0.0001f) continue; // Skip the center Z line to avoid overlap
+        if (fabs(z - cameraPos.z) > zfar) continue; // Skip lines outside view range
+        DebugDraw::Get().Line(Vec3(-gridExtent, 0, z), Vec3(gridExtent, 0, z), nextGridGray);
+    }
+
+    // Draw center lines last to ensure they are visually on top
+    float lineLength = std::min(gridExtent, zfar); // Center lines extend across the grid but are limited by zfar
+    DebugDraw::Get().Line(Vec3(-lineLength, 0, 0), Vec3(lineLength, 0, 0), red);   // X-axis
+    DebugDraw::Get().Line(Vec3(0, -lineLength, 0), Vec3(0, lineLength, 0), green); // Y-axis
+    DebugDraw::Get().Line(Vec3(0, 0, -lineLength), Vec3(0, 0, lineLength), blue); // Z-axis
+}
+
+
 void SkyPiGame::Render()
 {
-    DebugDraw::Get().Line(Vec3(0, 0, 0), Vec3(1, 1, 1), 0xFFFFFFFF);
+    DrawXZGrid(m_cameraPos, 5000.f);
 
     static f32 clearColor[] = { .4f, .6f, .9f, 1.f };
     Graphics::Get().ClearRenderTarget(Graphics::Get().GetCurrentBackBufferRT(), clearColor);

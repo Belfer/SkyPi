@@ -72,7 +72,7 @@ private:
         u32 indexCount{ 0 };
     };
 
-    Cell ReadCell(u32 x, u32 y);
+    void ReadCell(u32 x, u32 y, Cell& cell);
 
 private:
     template <typename T>
@@ -89,7 +89,6 @@ private:
 
     GraphicsHandle m_resources{ INVALID_GRAPHICS_HANDLE };
 
-    Image m_heightmap{};
     GraphicsHandle m_texture{ INVALID_GRAPHICS_HANDLE };
 
     u32 m_maxCells{ 100 };

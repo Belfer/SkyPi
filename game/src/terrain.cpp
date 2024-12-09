@@ -15,14 +15,20 @@ static Image LoadImage(StringView filename)
     if (stbi_is_16_bit(filepath))
     {
         image.data = (u8*)stbi_load_16(filepath, &image.width, &image.height, &image.channels, 0);
+        image.is_16bit = true;
+        image.is_hdr = false;
     }
     else if (stbi_is_hdr(filepath))
     {
         FAIL("What to do with HDR?");
+        image.is_16bit = false;
+        image.is_hdr = true;
     }
     else
     {
         image.data = stbi_load(filepath, &image.width, &image.height, &image.channels, 0);
+        image.is_16bit = false;
+        image.is_hdr = false;
     }
     return image;
 }
@@ -153,43 +159,6 @@ void Terrain::Initialize()
 
         UnloadImage(image);
     }
-    /*
-    // Create terrain buffers
-    {
-        BufferInfo bufferInfo;
-        BufferData bufferData;
-
-        // Vertex buffer
-        bufferInfo.type = BufferType::VERTEX_BUFFER;
-        bufferInfo.usage = BufferUsage::DYNAMIC;
-        bufferInfo.access = BufferAccess::WRITE;
-        bufferInfo.strideBytes = sizeof(VertexData);
-
-        static VertexData verts[] =
-        {
-            VertexData{ Vec3{-128, 0, -128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} },
-            VertexData{ Vec3{ 128, 0, -128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} },
-            VertexData{ Vec3{-128, 0,  128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} },
-            VertexData{ Vec3{ 128, 0,  128}, Vec3{0, 1, 0}, Vec3{1, 0, 0} }
-        };
-        bufferData.dataSize = sizeof(verts);
-        bufferData.pData = verts;
-
-        m_vertexBuffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);
-
-        // Index buffer
-        bufferInfo.type = BufferType::INDEX_BUFFER;
-        bufferInfo.usage = BufferUsage::DYNAMIC;
-        bufferInfo.access = BufferAccess::WRITE;
-        bufferInfo.strideBytes = 0;
-
-        static u32 indices[] = { 0, 1, 2, 3 };
-        bufferData.dataSize = sizeof(indices);
-        bufferData.pData = indices;
-
-        m_indexBuffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);
-        m_indexCount = ARRAYSIZE(indices);
-    }*/
 }
 
 void Terrain::Shutdown()
@@ -213,11 +182,13 @@ void Terrain::Shutdown()
 
     if (m_texture != INVALID_GRAPHICS_HANDLE)
         Graphics::Get().DestroyTexture(m_texture);
-    UnloadImage(m_heightmap);
 }
 
 void Terrain::Import(StringView srcPath, StringView dstPath)
 {
+    // Full resolution: 20480+1 x 16384+1 pixels
+    // Each cell: 128+1 x 128+1 pixels
+    // Low resolution: 32x32 cells including padding
     Image heightmap = LoadImage(srcPath);
     ENSURE(heightmap.is_16bit);
 
@@ -225,21 +196,22 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
 
     const i32 width = heightmap.width;
     const i32 height = heightmap.height;
-    const u8* data = heightmap.data;
+    const u16* data = reinterpret_cast<const u16*>(heightmap.data);
 
-    const u32 cellSize = Terrain::Cell::Length;
-    i32 cellsX = (width + cellSize - 1) / cellSize;
-    i32 cellsY = (height + cellSize - 1) / cellSize;
+    const u32 cellSize = Cell::Length;
+    const i32 cellsX = (width + cellSize - 1) / cellSize;
+    const i32 cellsY = (height + cellSize - 1) / cellSize;
 
     // Write header
+    outFile.seekp(0);
     outFile.write((char*)&width, sizeof(i32));
     outFile.write((char*)&height, sizeof(i32));
 
     // Write cells
-    static Terrain::Cell::Buffer g_cellBuffer;
-    for (i32 y = 0; y < cellsY; ++y)
+    Cell::Buffer cellBuffer;
+    for (u32 y = 0; y < cellsY; ++y)
     {
-        for (i32 x = 0; x < cellsX; ++x)
+        for (u32 x = 0; x < cellsX; ++x)
         {
             for (i32 cy = 0; cy < cellSize; ++cy)
             {
@@ -249,19 +221,19 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
                     i32 globalY = y * cellSize + cy;
                     if (globalX < width && globalY < height)
                     {
-                        g_cellBuffer[cy * cellSize + cx] = data[globalY * width + globalX];
+                        cellBuffer[cy * cellSize + cx] = data[globalY * width + globalX];
                     }
                     else
                     {
-                        g_cellBuffer[cy * cellSize + cx] = 0; // Fill with zeros if out of bounds
+                        cellBuffer[cy * cellSize + cx] = 0; // Fill with zeros if out of bounds
                     }
                 }
             }
 
-            // Write size and data
-            const u32 cellByteSize = Terrain::Cell::ByteSize;
-            outFile.write((char*)&cellByteSize, sizeof(u32));
-            outFile.write((char*)g_cellBuffer.data(), cellByteSize);
+            // Write cell coordinates and data
+            outFile.write((char*)&x, sizeof(u32));
+            outFile.write((char*)&y, sizeof(u32));
+            outFile.write((char*)cellBuffer.data(), Cell::ByteSize);
         }
     }
 
@@ -273,6 +245,9 @@ void Terrain::OpenStream(StringView heightmapPath)
 {
     CString<512> filepath = File::GetPath(heightmapPath);
     m_fileStream.open(filepath, std::ios::binary);
+
+    m_cells.resize(m_maxCells);
+    ReadCell(1, 2, m_cells[0]);
 }
 
 void Terrain::CloseStream()
@@ -281,112 +256,147 @@ void Terrain::CloseStream()
     m_cells.clear();
 }
 
-Terrain::Cell Terrain::ReadCell(u32 x, u32 y)
+void Terrain::ReadCell(u32 x, u32 y, Terrain::Cell& cell)
 {
     ENSURE(m_fileStream.is_open());
-    static Terrain::Cell::Buffer g_cellBuffer;
 
+    // Read header
+    i32 width = 0, height = 0;
     m_fileStream.seekg(0);
+    m_fileStream.read((char*)&width, sizeof(i32));
+    m_fileStream.read((char*)&height, sizeof(i32));
 
-    /*
-    // Load terrain heightmap
+    const u32 cellSize = Cell::Length;
+    const i32 cellsX = (width + cellSize - 1) / cellSize;
+    const i32 cellsY = (height + cellSize - 1) / cellSize;
+
+    ENSURE(x < cellsX && y < cellsY);
+
+    const u32 headerSize = sizeof(i32) * 2;
+    const u32 cellDataSize = sizeof(u32) * 2 + Cell::ByteSize;
+    const u32 cellIndex = y * cellsX + x;
+    const u32 offset = headerSize + (cellIndex * cellDataSize);
+
+    // Read cell data
+    m_fileStream.seekg(offset);
+
+    u32 cellX = 0, cellY = 0;
+    m_fileStream.read((char*)&cellX, sizeof(u32));
+    m_fileStream.read((char*)&cellY, sizeof(u32));
+
+    ENSURE(cellX == x && cellY == y); // Validate cell coordinates
+    m_fileStream.read((char*)cell.buffer.data(), Cell::ByteSize);
+    
+    // Update terrain buffers
+    BufferData bufferData;
+
+    const i32 w = cellSize;
+    const i32 h = cellSize;
+    const u16* d = cell.buffer.data();
+
+    // Vertex buffer
+    const f32 yScaleNorm = 1.f / 0xFFFF;
+    const f32 yScale = 500.f;
+    const f32 yShift = 0;
+    const f32 cellWorldOffsetX = x * (cellSize - 1);
+    const f32 cellWorldOffsetZ = y * (cellSize - 1);
+
+    List<Vertex> vertices;
+    vertices.reserve(w * h);
+    for (i32 i = 0; i < h; i++)
     {
-        // Full res is 160x128 cells each cell is 128 pixels
-        // The full res also adds an extra padding row/col at the end so the total res is: 20480+1 x 16384+1
-        // The low res is just a subsection of the whole thing, and is 32x32 cells and it also includes the padding.
-        m_heightmap = LoadImage(heightmap, true);
+        for (i32 j = 0; j < w; j++)
+        {
+            u16 heightValue = d[j + w * i];
+            f32 vx = cellWorldOffsetX + j;
+            f32 vz = cellWorldOffsetZ + i;
+            f32 vy = heightValue * yScaleNorm * yScale - yShift;
+
+            vertices.emplace_back(Vertex{ Vec3{vx, vy, vz}, Vec3{}, Vec3{} });
+        }
     }
 
-    // Update terrain buffers
+    // Calculate normals and tangents
+    for (i32 i = 1; i < h - 1; i++)
     {
-        BufferData bufferData;
-
-        i32 w = m_heightmap.width;
-        i32 h = m_heightmap.height;
-        i32 c = m_heightmap.channels;
-        auto d = m_heightmap.data;
-
-        // Vertex buffer
-        f32 yScaleNorm = 1.f / 0xFFFF;
-        f32 yScale = 500.f;
-        f32 yShift = 0;
-        List<VertexData> vertices;
-        vertices.reserve(w * h);
-        for (i32 i = 0; i < h; i++)
+        for (i32 j = 1; j < w - 1; j++)
         {
-            for (i32 j = 0; j < w; j++)
-            {
-                u16* pixelOffset = reinterpret_cast<u16*>(d + (j + w * i) * c);
-                u16 y = *pixelOffset;
+            Vec3 center = vertices[i * w + j].position;
+            Vec3 left = vertices[i * w + (j - 1)].position;
+            Vec3 right = vertices[i * w + (j + 1)].position;
+            Vec3 down = vertices[(i - 1) * w + j].position;
+            Vec3 up = vertices[(i + 1) * w + j].position;
 
-                // Calculate position
-                f32 vx = -h / 2.0f + h * i / (f32)h;
-                f32 vy = y * yScaleNorm * yScale - yShift;
-                f32 vz = -w / 2.0f + w * j / (f32)w;
+            vertices[i * w + j].normal = Vec3::Cross(up - center, right - center).Normalized();
+            vertices[i * w + j].tangent = (right - center).Normalized();
+        }
+    }
 
-                vertices.emplace_back(VertexData{ Vec3{vx, vy, vz}, Vec3{}, Vec3{} });
-            }
+    bufferData.dataSize = (u32)(vertices.size() * sizeof(Vertex));
+    bufferData.pData = vertices.data();
+
+    if (cell.vertexBuffer == INVALID_GRAPHICS_HANDLE)
+    {
+        BufferInfo bufferInfo;
+        bufferInfo.type = BufferType::VERTEX_BUFFER;
+        bufferInfo.usage = BufferUsage::DYNAMIC;
+        bufferInfo.access = BufferAccess::WRITE;
+        bufferInfo.strideBytes = sizeof(Vertex);
+
+        cell.vertexBuffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);
+    }
+    else
+    {
+        Graphics::Get().UpdateBuffer(cell.vertexBuffer, bufferData);
+    }
+
+    // Index buffer
+    std::vector<u32> indices;
+    indices.reserve((h - 1) * (2 * w) + 2 * (h - 2));
+    for (i32 i = 0; i < h - 1; i++)
+    {
+        for (i32 j = 0; j < w; j++)
+        {
+            indices.push_back(j + w * i);
+            indices.push_back(j + w * (i + 1));
         }
 
-        for (i32 i = 1; i < h - 1; i++)
+        if (i < h - 2)
         {
-            for (i32 j = 1; j < w - 1; j++)
-            {
-                // Calculate normals and tangents
-                Vec3 center = vertices[i * w + j].position;
-                Vec3 left = vertices[i * w + (j - 1)].position;
-                Vec3 right = vertices[i * w + (j + 1)].position;
-                Vec3 down = vertices[(i - 1) * w + j].position;
-                Vec3 up = vertices[(i + 1) * w + j].position;
-
-                vertices[i * w + j].normal = Vec3::Cross(up - center, right - center).Normalized();
-                vertices[i * w + j].tangent = (right - center).Normalized();
-            }
+            indices.push_back((w - 1) + w * (i + 1));
+            indices.push_back(w * (i + 1));
         }
+    }
 
-        bufferData.dataSize = (u32)(vertices.size() * sizeof(VertexData));
-        bufferData.pData = vertices.data();
+    bufferData.dataSize = (u32)(indices.size() * sizeof(u32));
+    bufferData.pData = indices.data();
 
-        Graphics::Get().UpdateBuffer(m_vertexBuffer, bufferData);
+    if (cell.indexBuffer == INVALID_GRAPHICS_HANDLE)
+    {
+        BufferInfo bufferInfo;
+        bufferInfo.type = BufferType::INDEX_BUFFER;
+        bufferInfo.usage = BufferUsage::DYNAMIC;
+        bufferInfo.access = BufferAccess::WRITE;
 
-        // Index buffer
-        std::vector<u32> indices;
-        indices.reserve((h - 1) * (2 * w) + 2 * (h - 2));
-        for (i32 i = 0; i < h - 1; i++)
-        {
-            for (i32 j = 0; j < w; j++)
-            {
-                indices.push_back(j + w * i);
-                indices.push_back(j + w * (i + 1));
-            }
-
-            if (i < h - 2)
-            {
-                indices.push_back((w - 1) + w * (i + 1));
-                indices.push_back(w * (i + 1));
-            }
-        }
-
-        bufferData.dataSize = (u32)(indices.size() * sizeof(u32));
-        bufferData.pData = indices.data();
-
-        Graphics::Get().UpdateBuffer(m_indexBuffer, bufferData);
-        m_indexCount = indices.size();
-    }*/
-
-    return Terrain::Cell{};
+        cell.indexBuffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);
+    }
+    else
+    {
+        Graphics::Get().UpdateBuffer(cell.indexBuffer, bufferData);
+    }
+    cell.indexCount = indices.size();
 }
 
 void Terrain::Update(const Vec3& position)
 {
-    //if (!m_fileStream.is_open())
-    //    return;
+    if (!m_fileStream.is_open())
+        return;
 }
 
 void Terrain::Render(const Camera& camera)
 {
-    //if (!m_fileStream.is_open())
-    //    return;
+    if (!m_fileStream.is_open())
+        return;
 
     BufferData bufferData;
     bufferData.dataSize = sizeof(TerrainDrawData);
@@ -402,8 +412,8 @@ void Terrain::Render(const Camera& camera)
             cell.indexBuffer == INVALID_GRAPHICS_HANDLE)
             continue;
 
-        if (!Shape::Overlaps(camera.GetFrustrum(), cell.aabb))
-            continue;
+        //if (!Shape::Overlaps(camera.GetFrustrum(), cell.aabb))
+        //    continue;
 
         const u64 offset = 0;
         GraphicsHandle pBuffers[] = { cell.vertexBuffer };
