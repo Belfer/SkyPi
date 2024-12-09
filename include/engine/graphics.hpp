@@ -1,8 +1,10 @@
 #pragma once
 
 #include <engine/log.hpp>
+#include <engine/math.hpp>
 #include <engine/byte_types.hpp>
 #include <engine/macros.hpp>
+#include <engine/list.hpp>
 
 //#include <rttr/rttr_enable.h>
 
@@ -10,7 +12,7 @@ using GraphicsHandle = u64;
 constexpr GraphicsHandle INVALID_GRAPHICS_HANDLE = -1;
 
 enum struct GraphicsClearFlags { NONE, DEPTH, STENCIL };
-enum struct GraphicsValueType { UNDEFINED, INT8, INT16, INT32, UINT8, UINT16, UINT32, FLOAT16, FLOAT32 };
+enum struct GraphicsValueType { UNDEFINED, INT8, INT16, INT32, UINT8, UINT16, UINT32, FLOAT16, FLOAT32, MAT4 };
 
 enum struct ShaderType { UNKNOWN, VERTEX, PIXEL, GEOMETRY, COMPUTE };
 
@@ -24,7 +26,7 @@ enum struct TextureFlags { NONE = BIT(0), SHADER_RESOURCE = BIT(1), RENDER_TARGE
 enum struct ResourceBindingType { UNKNOWN, TEXTURE, UNIFORM_BUFFER, STORAGE_BUFFER };
 enum struct ResourceBindingAccess { STATIC, MUTABLE, DYNAMIC };
 
-enum struct PipelineTopology { UNDEFINED, POINTS, LINES, TRIANGLES, TRIANGLE_STRIP };
+enum struct PipelineTopology { UNDEFINED, POINTS, LINES, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN };
 enum struct PipelineFaceCull { NONE, CW, CCW };
 
 struct ShaderInfo
@@ -190,6 +192,7 @@ public:
 	virtual GraphicsHandle CreatePipeline(const PipelineInfo& info) = 0;
 	virtual void DestroyPipeline(const GraphicsHandle pipeline) = 0;
 	virtual void SetPipeline(const GraphicsHandle pipeline) = 0;
+	virtual void SetUniform(const GraphicsHandle pipeline, StringView name, GraphicsValueType valueType, u32 count, u8* data) = 0;
 	virtual void CommitResources(const GraphicsHandle pipeline, const GraphicsHandle resources) = 0;
 
 	virtual void SetVertexBuffers(i32 i, i32 count, const GraphicsHandle* pBuffers, const u64* offset) = 0;
@@ -205,4 +208,39 @@ public:
 	virtual void NewFrameImGui() = 0;
 	virtual void EndFrameImGui() = 0;
 #endif
+};
+
+class DebugDraw
+{
+public:
+	static DebugDraw& Get();
+
+	bool Initialize();
+	void Shutdown();
+
+	void Line(const Vec3& a, const Vec3& b, u32 color);
+
+	void Render(const Mat4& viewProj);
+	void Clear();
+
+private:
+	GraphicsHandle m_vertexShader{ INVALID_GRAPHICS_HANDLE };
+	GraphicsHandle m_pixelShader{ INVALID_GRAPHICS_HANDLE };
+	GraphicsHandle m_pipeline{ INVALID_GRAPHICS_HANDLE };
+
+	GraphicsHandle m_vertexBuffer{ INVALID_GRAPHICS_HANDLE };
+
+	struct Vertex
+	{
+		Vec3 position{};
+		u32 color{};
+
+		Vertex() {}
+		Vertex(const Vec3& p, u32 c)
+			: position(p)
+			, color(c)
+		{}
+	};
+
+	List<Vertex> m_vertices{};
 };

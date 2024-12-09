@@ -66,13 +66,17 @@ void SkyPiGame::Update()
     // Update view data
     int w, h;
     Window::Get().GetSize(&w, &h);
-    Mat4 camProj = Mat4::Perspective(60.f, h > 0 ? (f32)w / h : 1.f, 0.1f, 5000.f);
-    Mat4 camView = Mat4::LookAt(m_cameraPos, m_cameraPos + camRot * Vec3::Forward(), Vec3::Up());
-    m_constantData.viewProjMtx = camProj * camView;
+    m_camera.SetProjection(Mat4::Perspective(60.f, h > 0 ? (f32)w / h : 1.f, 0.1f, 5000.f));
+    m_camera.SetView(Mat4::LookAt(m_cameraPos, m_cameraPos + camRot * Vec3::Forward(), Vec3::Up()));
+    m_camera.Update();
+
+    m_constantData.viewProjMtx = m_camera.GetViewProjection();
 }
 
 void SkyPiGame::Render()
 {
+    DebugDraw::Get().Line(Vec3(0, 0, 0), Vec3(1, 1, 1), 0xFFFFFFFF);
+
     static f32 clearColor[] = { .4f, .6f, .9f, 1.f };
     Graphics::Get().ClearRenderTarget(Graphics::Get().GetCurrentBackBufferRT(), clearColor);
 
@@ -81,7 +85,11 @@ void SkyPiGame::Render()
     bufferData.pData = &m_constantData;
     Graphics::Get().UpdateBuffer(m_constantBuffer, bufferData);
     
-    m_terrain.Render();
+    m_terrain.Render(m_camera);
+
+#ifdef DEBUG_BUILD
+    DebugDraw::Get().Render(m_camera.GetViewProjection());
+#endif
 }
 
 void SkyPiGame::Shutdown()

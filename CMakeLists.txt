@@ -42,6 +42,8 @@ set (ENGINE_SRCS
 	"src/engine/profiler.cpp"
 	"src/engine/uuid.cpp"
 	"src/engine/window.cpp"
+
+	"src/framework/camera.cpp"
 )
 
 set (ENGINE_LIBS fmt stb glm wren)

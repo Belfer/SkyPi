@@ -7,6 +7,14 @@
 #include <imgui.h>
 #include <functional>
 
+enum struct EditorTheme
+{
+	DARK,
+	LIGHT,
+	GRAY,
+	ACRYLIC
+};
+
 class Editor
 {
 public:
@@ -51,6 +59,14 @@ public:
 	void Clear();
 
 private:
+	void ApplyTheme();
+	void PushMenuTheme();
+	void PopMenuTheme();
+
+private:
+	f32 m_uiScale = 1.0f;
+	EditorTheme m_currentTheme{ EditorTheme::ACRYLIC };
+
 	List<std::function<void()>> m_menuBars;
 	List<UniquePtr<Editor>> m_editors;
 };

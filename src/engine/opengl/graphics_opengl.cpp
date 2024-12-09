@@ -7,14 +7,14 @@
 #include <engine/window.hpp>
 #include <engine/math.hpp>
 
+#include "gl_common.hpp"
+
 //#include <rttr/registration.h>
 //RTTR_PLUGIN_REGISTRATION
 //{
 //    rttr::registration::class_<GraphicsOpenGL>("GraphicsOpenGL")
 //        .constructor();
 //}
-
-#include <glad/glad.h>
 
 #ifdef EDITOR_BUILD
 #include <imgui.h>
@@ -89,6 +89,7 @@ public:
     GraphicsHandle CreatePipeline(const PipelineInfo& info) override;
     void DestroyPipeline(const GraphicsHandle pipeline) override;
     void SetPipeline(const GraphicsHandle pipeline) override;
+    void SetUniform(const GraphicsHandle pipeline, StringView name, GraphicsValueType valueType, u32 count, u8* data) override;
     void CommitResources(const GraphicsHandle pipeline, const GraphicsHandle resources) override;
 
     GraphicsHandle CreateBuffer(const BufferInfo& info, const BufferData& data) override;
@@ -805,40 +806,6 @@ void GraphicsOpenGL::BindResource(const GraphicsHandle resources, const char* na
     it->second.handle = resource;
 }
 
-static GLenum GetValueType(GraphicsValueType vt)
-{
-    switch (vt)
-    {
-    case GraphicsValueType::FLOAT32: return GL_FLOAT;
-        break;
-    case GraphicsValueType::UINT32: return GL_UNSIGNED_INT;
-        break;
-    case GraphicsValueType::INT32: return GL_INT;
-        break;
-
-    default:
-        LOGE(Graphics, "Value type not supported!");
-        return 0;
-    }
-}
-
-static u32 GetValueSize(GraphicsValueType vt)
-{
-    switch (vt)
-    {
-    case GraphicsValueType::FLOAT32: return sizeof(f32);
-        break;
-    case GraphicsValueType::UINT32: return sizeof(u32);
-        break;
-    case GraphicsValueType::INT32: return sizeof(i32);
-        break;
-
-    default:
-        LOGE(Graphics, "Value type not supported!");
-        return 0;
-    }
-}
-
 GraphicsHandle GraphicsOpenGL::CreatePipeline(const PipelineInfo& info)
 {
     const auto& vert_shader = GetImpl(info.vertShader, s_shaders);
@@ -871,10 +838,10 @@ GraphicsHandle GraphicsOpenGL::CreatePipeline(const PipelineInfo& info)
             relativeOffset = elem.relativeOffset;
         }
 
-        if (elem.valueType == GraphicsValueType::FLOAT32)
-            glVertexArrayAttribFormat(vao_handle, elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), elem.isNormalized, relativeOffset);
-        if (elem.valueType == GraphicsValueType::INT32)
+        if (elem.valueType < GraphicsValueType::FLOAT16 && !elem.isNormalized)
             glVertexArrayAttribIFormat(vao_handle, elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), relativeOffset);
+        else
+            glVertexArrayAttribFormat(vao_handle, elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), elem.isNormalized, relativeOffset);
 
         glEnableVertexArrayAttrib(vao_handle, elem.inputIndex);
         glVertexArrayAttribBinding(vao_handle, elem.inputIndex, elem.bufferSlot);
@@ -913,6 +880,20 @@ void GraphicsOpenGL::SetPipeline(const GraphicsHandle pipeline)
 
     glUseProgram(pipeline_impl.program);
     glBindVertexArray(pipeline_impl.vao);
+}
+
+void GraphicsOpenGL::SetUniform(const GraphicsHandle pipeline, StringView name, GraphicsValueType valueType, u32 count, u8* data)
+{
+    auto& pipeline_impl = GetImpl(pipeline, s_pipelines);
+
+    switch (valueType)
+    {
+    case GraphicsValueType::MAT4:
+    {
+        GLint location = glGetUniformLocation(pipeline_impl.program, name.data());
+        glUniformMatrix4fv(location, count, GL_FALSE, (GLfloat*)data);
+    }
+    }
 }
 
 void GraphicsOpenGL::CommitResources(const GraphicsHandle pipeline, const GraphicsHandle resources)
@@ -1062,7 +1043,7 @@ void GraphicsOpenGL::SetIndexBuffer(const GraphicsHandle buffer, i32 i)
 
 void GraphicsOpenGL::Draw(const DrawAttribs& attribs)
 {
-    glDrawArrays(GL_TRIANGLES, 0, attribs.numVertices);
+    glDrawArrays(GL_LINES, 0, attribs.numVertices);
 }
 
 void GraphicsOpenGL::DrawIndexed(const DrawIndexedAttribs& attribs)

@@ -44,7 +44,7 @@ void main()
 #endif
 
 #ifdef PIXEL
-layout (location = 0) out vec4 Out_Color;
+layout (location = 0) out vec4 p_color;
 
 in VertexOutput io;
 
@@ -63,13 +63,13 @@ void main()
 
     vec3 color = io.color.rgb * albedo.rgb * diffuse;
     float alpha = io.color.a * albedo.a;
-    Out_Color = vec4(color, alpha);
+    p_color = vec4(color, alpha);
 
-    //Out_Color = vec4(1);
-    //Out_Color = vec4(uv, 0, 1);
-    //Out_Color = vec4(N * 0.5 + 0.5, 1);
-    //Out_Color = vec4(vec3(diffuse), 1);
-    //Out_Color = albedo;
-    //Out_Color = io.color;
+    //p_color = vec4(1);
+    //p_color = vec4(uv, 0, 1);
+    //p_color = vec4(N * 0.5 + 0.5, 1);
+    //p_color = vec4(vec3(diffuse), 1);
+    //p_color = albedo;
+    //p_color = io.color;
 }
 #endif

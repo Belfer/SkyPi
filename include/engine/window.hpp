@@ -1,5 +1,6 @@
 #pragma once
 
+#include <engine/byte_types.hpp>
 //#include <rttr/rttr_enable.h>
 
 enum struct GamepadButton
@@ -110,30 +111,32 @@ public:
 	virtual void PollEvents() = 0;
 	virtual void Display() = 0;
 
-	virtual void GetSize(int* width, int* height) = 0;
+	virtual void GetSize(i32* width, i32* height) = 0;
+	virtual void GetContentScale(f32* xscale, f32* yscale) = 0;
+
 	virtual void SetCursorMode(CursorMode mode) = 0;
 
-	virtual float GetAxis(GamepadAxis axis) = 0;
+	virtual f32 GetAxis(GamepadAxis axis) = 0;
 	virtual bool GetButton(GamepadButton button) = 0;
 	virtual bool GetButtonOnce(GamepadButton button) = 0;
 	virtual bool GetKey(Key key) = 0;
 	virtual bool GetKeyOnce(Key key) = 0;
 	virtual bool GetMouseButton(MouseButton button) = 0;
 	virtual bool GetMouseButtonOnce(MouseButton button) = 0;
-	virtual float GetMouseX() = 0;
-	virtual float GetMouseY() = 0;
-	virtual int GetNumTouches() = 0;
-	virtual int GetTouchId(int index) = 0;
-	virtual float GetTouchX(int index) = 0;
-	virtual float GetTouchY(int index) = 0;
-	virtual void SetPadVibration(int leftRumble, int rightRumble) = 0;
-	virtual void SetPadLightbarColor(float r, float g, float b) = 0;
+	virtual f32 GetMouseX() = 0;
+	virtual f32 GetMouseY() = 0;
+	virtual i32 GetNumTouches() = 0;
+	virtual i32 GetTouchId(i32 index) = 0;
+	virtual f32 GetTouchX(i32 index) = 0;
+	virtual f32 GetTouchY(i32 index) = 0;
+	virtual void SetPadVibration(i32 leftRumble, i32 rightRumble) = 0;
+	virtual void SetPadLightbarColor(f32 r, f32 g, f32 b) = 0;
 	virtual void ResetPadLightbarColor() = 0;
 
 	virtual WindowGLProc GetProcAddress(const char* name) = 0;
 
 #ifdef EDITOR_BUILD
-	// ImGui calls (tmp solution until imgui is fully done via interface)
+	// ImGui calls (tmp solution until imgui is fully done via i32erface)
 	virtual bool InitializeImGui() = 0;
 	virtual void ShutdownImGui() = 0;
 	virtual void NewFrameImGui() = 0;

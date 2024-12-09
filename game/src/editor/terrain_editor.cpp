@@ -6,7 +6,8 @@ Inspector<Terrain>::Inspector(Terrain& terrain)
 {
     SetTitle("Terrain");
     SetExclusive(true);
-    m_path = "/assets/tamriel_cell.png";
+    m_heightmapSrcPath = "/assets/tamriel_5x5.png";
+    m_heightmapDstPath = "/assets/tamriel_5x5.bin";
 }
 
 void Inspector<Terrain>::OnGui()
@@ -18,26 +19,41 @@ void Inspector<Terrain>::OnGui()
 
     if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::Text("Path: ");
-        ImGui::SameLine();
-        ImGui::InputText("##Path", m_path.data(), m_path.length());
-        
-        CString<64> genTime;
-        genTime.format("Gen Time (ms): {}", (i32)m_genTime);
-        ImGui::Text(genTime);
-        
-        if (ImGui::Button("Generate"))
-        {
-            Stopwatch sw;
-            sw.Start();
-            m_terrain.Generate(m_path.data());
-            m_genTime = sw.ElapsedMilliseconds();
-        }
+        ImGui::SeparatorText("Processing");
 
-        //if (ImGui::Button("Reload"))
-        //{
-        //    m_terrain.Reload();
-        //}
+        ImGui::Text("Heightmap Src Path: ");
+        ImGui::SameLine();
+        ImGui::InputText("##HeightmapSrcPath", m_heightmapSrcPath.data(), m_heightmapSrcPath.size());
+
+        ImGui::Text("Heightmap Dst Path: ");
+        ImGui::SameLine();
+        ImGui::InputText("##HeightmapDstPath", m_heightmapDstPath.data(), m_heightmapDstPath.size());
+
+        if (ImGui::Button("Import"))
+        {
+            m_terrain.Import(m_heightmapSrcPath, m_heightmapDstPath);
+        }
+        
+        ImGui::SameLine();
+
+        f32 time{ 0 };
+        CString<64> genTime;
+        genTime.format("Import Time (ms): {}", (i32)time);
+        ImGui::Text(genTime);
+
+        ImGui::SeparatorText("Streaming");
+
+        if (ImGui::Button("Open Stream"))
+        {
+            m_terrain.OpenStream(m_heightmapDstPath);
+        }
+        
+        ImGui::SameLine();
+
+        if (ImGui::Button("Close Stream"))
+        {
+            m_terrain.CloseStream();
+        }
     }
 }
 

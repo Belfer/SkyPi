@@ -3,9 +3,16 @@
 #include <engine/byte_types.hpp>
 
 #include <cmath>
+#include <glm/glm.hpp>
 
 namespace Math
 {
+	template <typename T>
+	static T Abs(const T& a)
+	{
+		return glm::abs(a);
+	}
+
 	template <typename T>
 	static T FMod(const T& a, const T& b)
 	{
@@ -23,6 +30,7 @@ namespace Math
 	{
 		return (a < b) ? a : b;
 	}
+
 
 	template <typename T>
 	static T Clamp(const T& x, const T& min, const T& max)
@@ -152,9 +160,31 @@ struct Vec4
 		struct { f32 x, y, z, w; };
 	};
 
-	//f32 At(i32 i);
+	f32 At(i32 i);
 	inline f32& operator[](i32 i) { return data[i]; }
 	inline const f32& operator[](i32 i) const { return data[i]; }
+
+	f32 SqrMagnitude();
+	f32 Magnitude();
+	Vec4 Normalized();
+
+	void Set(f32 x, f32 y, f32 z, f32 w);
+
+	Vec4 Plus(const Vec4& rhs) const;
+	inline Vec4 operator+(const Vec4& rhs) const { return Plus(rhs); }
+	inline Vec4& operator+=(const Vec4& rhs) { *this = *this + rhs; return *this; }
+
+	Vec4 Negate() const;
+	inline Vec4 operator-() const { return Negate(); }
+
+	Vec4 Minus(const Vec4& rhs) const;
+	inline Vec4 operator-(const Vec4& rhs) const { return Minus(rhs); }
+
+	Vec4 Mul(f32 rhs) const;
+	inline Vec4 operator*(f32 rhs) const { return Mul(rhs); }
+
+	Vec4 Div(f32 rhs) const;
+	inline Vec4 operator/(f32 rhs) const { return Div(rhs); }
 
 	static Vec4 FromValuePtr(f32* v);
 };
@@ -282,8 +312,51 @@ struct Mat4
 	static Mat4 FromValuePtr(f32* v);
 };
 
+struct Line
+{
+	Vec3 start;
+	Vec3 end;
+};
+
+struct Plane
+{
+	Vec3 normal;
+	f32 d;
+
+	inline void operator=(const Vec4& rhs)
+	{
+		normal.Set(rhs.x, rhs.y, rhs.z);
+		d = rhs.w;
+	}
+
+	void Normalize()
+	{
+		f32 length = normal.Magnitude();
+		if (length > 0)
+		{
+			f32 inv = 1.f / length;
+			normal = normal * inv;
+			d *= inv;
+		}
+	}
+};
+
+struct Frustrum
+{
+	Plane planes[6]{};
+
+	void Normalize()
+	{
+		for (i32 i = 0; i < 6; ++i)
+		{
+			planes[i].Normalize();
+		}
+	}
+};
+
 struct Box3
 {
+	// Constructors
 	Box3() : min(0, 0, 0), max(0, 0, 0) {}
 	Box3(Vec3 min, Vec3 max)
 		: min(min)
@@ -292,11 +365,117 @@ struct Box3
 
 	Vec3 min;
 	Vec3 max;
-
-	inline bool Overlaps(const Box3& other) const
-	{
-		return min.x <= other.max.x && max.x >= other.min.x
-			&& min.y <= other.max.y && max.y >= other.min.y
-			&& min.z <= other.max.z && max.z >= other.min.z;
-	}
 };
+
+namespace Shape
+{
+	namespace detail
+	{
+		static bool OutsidePlane(const Box3& box, const Plane& plane)
+		{
+			Vec3 corners[8] =
+			{
+				{box.min.x, box.min.y, box.min.z}, {box.max.x, box.min.y, box.min.z}, {box.min.x, box.max.y, box.min.z}, {box.max.x, box.max.y, box.min.z},
+				{box.min.x, box.min.y, box.max.z}, {box.max.x, box.min.y, box.max.z}, {box.min.x, box.max.y, box.max.z}, {box.max.x, box.max.y, box.max.z}
+			};
+
+			for (const auto& corner : corners)
+			{
+				if (Vec3::Dot(plane.normal, corner) + plane.d > 0)
+					return false;
+			}
+			return true;
+		}
+
+		static bool IntersectsLineSegment(const Box3& box, const Vec3& start, const Vec3& direction)
+		{
+			f32 tmin = 0.0f, tmax = 1.0f;
+
+			for (i32 i = 0; i < 3; ++i) // For x, y, z axes
+			{
+				if (direction[i] != 0.0f)
+				{
+					f32 t1 = (box.min[i] - start[i]) / direction[i];
+					f32 t2 = (box.max[i] - start[i]) / direction[i];
+
+					if (t1 > t2) std::swap(t1, t2);
+
+					tmin = Math::Max(tmin, t1);
+					tmax = Math::Min(tmax, t2);
+
+					if (tmin > tmax)
+						return false;
+				}
+				else if (start[i] < box.min[i] || start[i] > box.max[i])
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
+	static bool Overlaps(const Box3& a, const Box3& b)
+	{
+		return a.min.x <= b.max.x && a.max.x >= b.min.x
+			&& a.min.y <= b.max.y && a.max.y >= b.min.y
+			&& a.min.z <= b.max.z && a.max.z >= b.min.z;
+	}
+
+	static bool Overlaps(const Box3& box, const Vec3& point)
+	{
+		return point.x >= box.min.x && point.x <= box.max.x
+			&& point.y >= box.min.y && point.y <= box.max.y
+			&& point.z >= box.min.z && point.z <= box.max.z;
+	}
+
+	static bool Overlaps(const Vec3& point, const Box3& box) { return Overlaps(box, point); }
+
+	static bool Overlaps(const Box3& box, const Line& line)
+	{
+		Vec3 start = line.start;
+		Vec3 end = line.end;
+
+		// Check if either endpoint is inside the box
+		if (Overlaps(box, start) || Overlaps(box, end))
+			return true;
+
+		// Check if the line intersects any face of the box
+		Vec3 direction = end - start;
+		return detail::IntersectsLineSegment(box, start, direction);
+	}
+
+	static bool Overlaps(const Line& line, const Box3& box) { return Overlaps(box, line); }
+
+	static bool Overlaps(const Box3& box, const Plane& plane)
+	{
+		// Compute the box extents along the plane normal
+		Vec3 center = (box.min + box.max) * 0.5f;
+		Vec3 halfExtents = (box.max - box.min) * 0.5f;
+
+		f32 r = halfExtents.x * Math::Abs(plane.normal.x)
+			+ halfExtents.y * Math::Abs(plane.normal.y)
+			+ halfExtents.z * Math::Abs(plane.normal.z);
+
+		// Distance of box center from plane
+		f32 s = Vec3::Dot(plane.normal, center) - plane.d;
+
+		// Overlaps if the distance from the center is less than the radius
+		return Math::Abs(s) <= r;
+	}
+
+	static bool Overlaps(const Plane& plane, const Box3& box) { return Overlaps(box, plane); }
+
+	static bool Overlaps(const Box3& box, const Frustrum& frustrum)
+	{
+		for (const auto& plane : frustrum.planes)
+		{
+			// Check if all corners are outside a single plane (separation axis theorem)
+			if (detail::OutsidePlane(box, plane))
+				return false;
+		}
+		return true;
+	}
+
+	static bool Overlaps(const Frustrum& frustrum, const Box3& box) { return Overlaps(box, frustrum); }
+}

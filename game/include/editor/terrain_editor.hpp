@@ -15,6 +15,7 @@ public:
 
 private:
 	Terrain& m_terrain;
-	CString<512> m_path{};
-	f32 m_genTime{ 0 };
+
+	CString<512> m_heightmapSrcPath{};
+	CString<512> m_heightmapDstPath{};
 };

@@ -7,14 +7,14 @@
 #include <engine/window.hpp>
 #include <engine/math.hpp>
 
+#include "gl_common.hpp"
+
 //#include <rttr/registration.h>
 //RTTR_PLUGIN_REGISTRATION
 //{
 //    rttr::registration::class_<GraphicsOpenGLES>("GraphicsOpenGLES")
 //        .constructor();
 //}
-
-#include <glad/glad.h>
 
 #ifdef EDITOR_BUILD
 #include <imgui.h>
@@ -90,6 +90,7 @@ public:
     GraphicsHandle CreatePipeline(const PipelineInfo& info) override;
     void DestroyPipeline(const GraphicsHandle pipeline) override;
     void SetPipeline(const GraphicsHandle pipeline) override;
+    void SetUniform(const GraphicsHandle pipeline, StringView name, GraphicsValueType valueType, u32 count, u8* data) override;
     void CommitResources(const GraphicsHandle pipeline, const GraphicsHandle resources) override;
 
     GraphicsHandle CreateBuffer(const BufferInfo& info, const BufferData& data) override;
@@ -193,7 +194,6 @@ struct PipelineImpl
     GraphicsHandle prevVertBuffer = INVALID_GRAPHICS_HANDLE;
     LayoutElement layoutElements[MAX_LAYOUT_ELEMS];
     u32 numElements = 0;
-    u32 stride = 0;
 
     GLenum faceCull = GL_CW;
 
@@ -774,32 +774,6 @@ void GraphicsOpenGLES::BindResource(const GraphicsHandle resources, const char* 
     it->second.handle = resource;
 }
 
-static GLenum GetValueType(GraphicsValueType vt)
-{
-    switch (vt)
-    {
-    case GraphicsValueType::FLOAT32: return GL_FLOAT;
-    case GraphicsValueType::UINT32: return GL_UNSIGNED_INT;
-    case GraphicsValueType::INT32: return GL_INT;
-    default:
-        LOGE(Graphics, "Value type not supported!");
-        return 0;
-    }
-}
-
-static u32 GetValueSize(GraphicsValueType vt)
-{
-    switch (vt)
-    {
-    case GraphicsValueType::FLOAT32: return sizeof(f32);
-    case GraphicsValueType::UINT32: return sizeof(u32);
-    case GraphicsValueType::INT32: return sizeof(i32);
-    default:
-        LOGE(Graphics, "Value type not supported!");
-        return 0;
-    }
-}
-
 GraphicsHandle GraphicsOpenGLES::CreatePipeline(const PipelineInfo& info)
 {
     // Retrieve shaders from storage
@@ -852,13 +826,6 @@ GraphicsHandle GraphicsOpenGLES::CreatePipeline(const PipelineInfo& info)
         pipeline_impl.layoutElements[i] = info.layoutElements[i];
     }
 
-    pipeline_impl.stride = 0;
-    for (u32 i = 0; i < info.numElements; ++i)
-    {
-        const auto& elem = info.layoutElements[i];
-        pipeline_impl.stride += elem.numComponents * GetValueSize(elem.valueType);
-    }
-
     s_pipelines.insert(std::make_pair(program_handle, pipeline_impl));
     return program_handle;
 }
@@ -896,6 +863,20 @@ void GraphicsOpenGLES::SetPipeline(const GraphicsHandle pipeline)
     glBindVertexArray(pipeline_impl.vao);
 
     m_currentBoundPipeline = pipeline;
+}
+
+void GraphicsOpenGLES::SetUniform(const GraphicsHandle pipeline, StringView name, GraphicsValueType valueType, u32 count, u8* data)
+{
+    auto& pipeline_impl = GetImpl(pipeline, s_pipelines);
+
+    switch (valueType)
+    {
+    case GraphicsValueType::MAT4:
+    {
+        GLint location = glGetUniformLocation(pipeline_impl.program, name.data());
+        glUniformMatrix4fv(location, count, GL_FALSE, (GLfloat*)data);
+    }
+    }
 }
 
 void GraphicsOpenGLES::CommitResources(const GraphicsHandle pipeline, const GraphicsHandle resources)
@@ -1054,10 +1035,10 @@ void GraphicsOpenGLES::SetVertexBuffers(i32 startSlot, i32 count, const Graphics
             if (elem.bufferSlot != slot)
                 continue; // Skip attributes not associated with this buffer slot
 
-            if (elem.valueType == GraphicsValueType::FLOAT32)
-                glVertexAttribPointer(elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), elem.isNormalized, pipeline_impl.stride, (void*)relativeOffset);
-            else if (elem.valueType == GraphicsValueType::INT32)
-                glVertexAttribIPointer(elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), pipeline_impl.stride, (void*)relativeOffset);
+            if (elem.valueType < GraphicsValueType::FLOAT16 && !elem.isNormalized)
+                glVertexAttribIPointer(elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), buffer_impl.stride, (void*)relativeOffset);
+            else
+                glVertexAttribPointer(elem.inputIndex, elem.numComponents, GetValueType(elem.valueType), elem.isNormalized, buffer_impl.stride, (void*)relativeOffset);
 
             glEnableVertexAttribArray(elem.inputIndex);
 
@@ -1074,7 +1055,7 @@ void GraphicsOpenGLES::SetIndexBuffer(const GraphicsHandle buffer, i32 i)
 
 void GraphicsOpenGLES::Draw(const DrawAttribs& attribs)
 {
-    glDrawArrays(GL_TRIANGLES, 0, attribs.numVertices);
+    glDrawArrays(GL_LINES, 0, attribs.numVertices);
     //glDrawArrays(GL_TRIANGLES, attribs.vertexOffset, attribs.numVertices);
 }
 

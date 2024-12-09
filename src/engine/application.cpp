@@ -44,6 +44,9 @@ int Application::Run(int argc, char** args, Game& game)
 
         Graphics::Get().NewFrame();
         game.Render();
+#ifdef DEBUG_BUILD
+        DebugDraw::Get().Clear();
+#endif
 #ifdef EDITOR_BUILD
         EditorManager::Get().OnGui();
 #endif
@@ -75,6 +78,14 @@ bool Application::Initialize() noexcept
         return false;
     }
 
+#ifdef DEBUG_BUILD
+    if (!DebugDraw::Get().Initialize())
+    {
+        LOGE(Core, "Failed to initialize debug draw!");
+        return false;
+    }
+#endif
+
 #ifdef EDITOR_BUILD
     if (!EditorManager::Get().Initialize())
     {
@@ -93,6 +104,10 @@ void Application::Shutdown() noexcept
 
 #ifdef EDITOR_BUILD
     EditorManager::Get().Shutdown();
+#endif
+
+#ifdef DEBUG_BUILD
+    DebugDraw::Get().Shutdown();
 #endif
 
     Graphics::Get().Shutdown();

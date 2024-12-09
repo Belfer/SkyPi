@@ -3,6 +3,7 @@
 class Game
 {
 public:
+    virtual ~Game() {}
     virtual void Configure() = 0;
     virtual bool Initialize() = 0;
     virtual void Update() = 0;

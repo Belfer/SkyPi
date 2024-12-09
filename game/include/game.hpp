@@ -25,16 +25,17 @@ public:
 private:
     friend class SkyPiEditor;
 
+    // Global data
+    ConstantData m_constantData{};
+    GraphicsHandle m_constantBuffer = INVALID_GRAPHICS_HANDLE;
+
     // Camera data
     Vec2 m_mousePos{ 0, 0 };
     Vec3 m_cameraPos{ 5, 5, 0 };
     Vec3 m_cameraRot{ 0, 0, 0 };
     f32 m_lookSpeed = 0.1f;
     f32 m_moveSpeed = 200.0f;
-
-    // Global data
-    ConstantData m_constantData{};
-    GraphicsHandle m_constantBuffer = INVALID_GRAPHICS_HANDLE;
+    Camera m_camera;
 
     // Terrain data
     Terrain m_terrain;

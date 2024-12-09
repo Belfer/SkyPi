@@ -46,6 +46,8 @@ public:
 	void Display() override;
 
 	void GetSize(i32* width, i32* height) override;
+	void GetContentScale(f32* xscale, f32* yscale) override;
+
 	void SetCursorMode(CursorMode mode) override;
 
 	f32 GetAxis(GamepadAxis axis) override;
@@ -137,6 +139,12 @@ bool WindowGLFW::IsOpen()
 void WindowGLFW::GetSize(i32* width, i32* height)
 {
 	glfwGetFramebufferSize(m_pWindow, width, height);
+}
+
+
+void WindowGLFW::GetContentScale(f32* xscale, f32* yscale)
+{
+	glfwGetWindowContentScale(m_pWindow, xscale, yscale);
 }
 
 void WindowGLFW::SetCursorMode(CursorMode mode)

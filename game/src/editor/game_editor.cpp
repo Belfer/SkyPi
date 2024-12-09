@@ -14,7 +14,17 @@ void SkyPiEditor::Configure()
     EditorManager::Get().AddMenuBar(
         [this]()
         {
-            if (ImGui::BeginMenu("Windows"))
+            if (ImGui::BeginMenu("File"))
+            {
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Edit"))
+            {
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Window"))
             {
                 if (ImGui::MenuItem("Terrain"))
                     EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
@@ -24,7 +34,6 @@ void SkyPiEditor::Configure()
         });
 
     EditorManager::Get().AddEditor(meta::make_unique<SkyPiEditor>(*this));
-    EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
     EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
 }
 

@@ -15,4 +15,10 @@ namespace meta
 	{
 		return UniquePtr<T>(new T(std::forward<Args>(args)...));
 	}
+
+	template <typename T, typename... Args>
+	UniquePtr<T> make_unique(T* ptr)
+	{
+		return UniquePtr<T>(ptr);
+	}
 }

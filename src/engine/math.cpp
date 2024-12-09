@@ -214,6 +214,63 @@ Vec3 Vec3::FromValuePtr(f32* vptr)
 	return v;
 }
 
+f32 Vec4::SqrMagnitude()
+{
+	glm::vec3 v = glm::make_vec3(data);
+	return glm::dot(v, v);
+}
+
+f32 Vec4::Magnitude()
+{
+	glm::vec3 v = glm::make_vec3(data);
+	return glm::length(v);
+}
+
+Vec4 Vec4::Normalized()
+{
+	glm::vec4 v = glm::normalize(glm::make_vec4(data));
+	return Vec4(v.x, v.y, v.z, v.w);
+}
+
+f32 Vec4::At(i32 i)
+{
+	return data[i];
+}
+
+void Vec4::Set(f32 x, f32 y, f32 z, f32 w)
+{
+	data[0] = x; data[1] = y; data[2] = z; data[3] = w;
+}
+
+Vec4 Vec4::Plus(const Vec4& rhs) const
+{
+	glm::vec4 v = glm::make_vec4(data) + glm::make_vec4(rhs.data);
+	return Vec4(v.x, v.y, v.z, v.w);
+}
+
+Vec4 Vec4::Negate() const
+{
+	return Vec4(-x, -y, -z, -w);
+}
+
+Vec4 Vec4::Minus(const Vec4& rhs) const
+{
+	glm::vec4 v = glm::make_vec4(data) - glm::make_vec4(rhs.data);
+	return Vec4(v.x, v.y, v.z, v.w);
+}
+
+Vec4 Vec4::Mul(f32 rhs) const
+{
+	glm::vec4 v = glm::make_vec4(data) * rhs;
+	return Vec4(v.x, v.y, v.z, v.w);
+}
+
+Vec4 Vec4::Div(f32 rhs) const
+{
+	glm::vec4 v = glm::make_vec4(data) / rhs;
+	return Vec4(v.x, v.y, v.z, v.w);
+}
+
 Vec4 Vec4::FromValuePtr(f32* vptr)
 {
 	Vec4 v;

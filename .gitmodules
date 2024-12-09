@@ -40,3 +40,6 @@
 [submodule "extern/astc-encoder"]
 	path = extern/astc-encoder
 	url = https://github.com/ARM-software/astc-encoder.git
+[submodule "extern/zlib"]
+	path = extern/zlib
+	url = https://github.com/madler/zlib.git
