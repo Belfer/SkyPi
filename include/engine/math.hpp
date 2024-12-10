@@ -7,6 +7,9 @@
 
 namespace Math
 {
+	static constexpr f32 F32Min = FLT_MIN;
+	static constexpr f32 F32Max = FLT_MAX;
+
 	template <typename T>
 	static T Abs(const T& a)
 	{

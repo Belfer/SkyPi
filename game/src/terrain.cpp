@@ -338,8 +338,8 @@ void Terrain::ReadCell(u32 x, u32 y, Terrain::Cell& cell)
     const f32 cellWorldOffsetX = x * (cellSize - 1);
     const f32 cellWorldOffsetZ = y * (cellSize - 1);
 
-    cell.aabb.min = Vec3{ FLT_MAX, FLT_MAX, FLT_MAX };
-    cell.aabb.max = Vec3{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
+    cell.aabb.min = Vec3{ Math::F32Max, Math::F32Max, Math::F32Max };
+    cell.aabb.max = Vec3{-Math::F32Max,-Math::F32Max,-Math::F32Max };
 
     List<Vertex> vertices;
     vertices.reserve(w * h);
