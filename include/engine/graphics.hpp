@@ -6,6 +6,9 @@
 #include <engine/macros.hpp>
 #include <engine/list.hpp>
 
+// TODO: Replace const char* with StringView
+#include <engine/string.hpp>
+
 //#include <rttr/rttr_enable.h>
 
 using GraphicsHandle = u64;

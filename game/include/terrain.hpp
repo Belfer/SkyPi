@@ -95,5 +95,7 @@ private:
     f32 m_viewDistance{ 1000.f };
     List<Cell> m_cells;
 
-    Frustrum m_prevFrustrum;
+    bool m_debugDraw{ false };
+    bool m_updateFrustum{ true };
+    Frustrum m_frustum{};
 };

@@ -12,7 +12,7 @@ public:
 	inline const Mat4& GetProjection() const { return m_projection; }
 
     inline const Mat4& GetViewProjection() const { return m_viewProjection; }
-    inline const Frustrum& GetFrustrum() const { return m_frustrum; }
+    inline const Frustrum& GetFrustum() const { return m_frustum; }
 
     inline void Update()
     {
@@ -20,50 +20,49 @@ public:
         Mat4 vp = m_projection * m_view;
         m_viewProjection = vp;
 
-        // Extract planes from the VP matrix
         // Left plane
-        m_frustrum.planes[0].normal.x = vp[0][3] + vp[0][0];
-        m_frustrum.planes[0].normal.y = vp[1][3] + vp[1][0];
-        m_frustrum.planes[0].normal.z = vp[2][3] + vp[2][0];
-        m_frustrum.planes[0].d = vp[3][3] + vp[3][0];
+        m_frustum.planes[0].normal.x = vp[0][3] + vp[0][0];
+        m_frustum.planes[0].normal.y = vp[1][3] + vp[1][0];
+        m_frustum.planes[0].normal.z = vp[2][3] + vp[2][0];
+        m_frustum.planes[0].d = vp[3][3] + vp[3][0];
 
         // Right plane
-        m_frustrum.planes[1].normal.x = vp[0][3] - vp[0][0];
-        m_frustrum.planes[1].normal.y = vp[1][3] - vp[1][0];
-        m_frustrum.planes[1].normal.z = vp[2][3] - vp[2][0];
-        m_frustrum.planes[1].d = vp[3][3] - vp[3][0];
+        m_frustum.planes[1].normal.x = vp[0][3] - vp[0][0];
+        m_frustum.planes[1].normal.y = vp[1][3] - vp[1][0];
+        m_frustum.planes[1].normal.z = vp[2][3] - vp[2][0];
+        m_frustum.planes[1].d = vp[3][3] - vp[3][0];
 
         // Bottom plane
-        m_frustrum.planes[2].normal.x = vp[0][3] + vp[0][1];
-        m_frustrum.planes[2].normal.y = vp[1][3] + vp[1][1];
-        m_frustrum.planes[2].normal.z = vp[2][3] + vp[2][1];
-        m_frustrum.planes[2].d = vp[3][3] + vp[3][1];
+        m_frustum.planes[2].normal.x = vp[0][3] + vp[0][1];
+        m_frustum.planes[2].normal.y = vp[1][3] + vp[1][1];
+        m_frustum.planes[2].normal.z = vp[2][3] + vp[2][1];
+        m_frustum.planes[2].d = vp[3][3] + vp[3][1];
 
         // Top plane
-        m_frustrum.planes[3].normal.x = vp[0][3] - vp[0][1];
-        m_frustrum.planes[3].normal.y = vp[1][3] - vp[1][1];
-        m_frustrum.planes[3].normal.z = vp[2][3] - vp[2][1];
-        m_frustrum.planes[3].d = vp[3][3] - vp[3][1];
+        m_frustum.planes[3].normal.x = vp[0][3] - vp[0][1];
+        m_frustum.planes[3].normal.y = vp[1][3] - vp[1][1];
+        m_frustum.planes[3].normal.z = vp[2][3] - vp[2][1];
+        m_frustum.planes[3].d = vp[3][3] - vp[3][1];
 
         // Near plane
-        m_frustrum.planes[4].normal.x = vp[0][3] + vp[0][2];
-        m_frustrum.planes[4].normal.y = vp[1][3] + vp[1][2];
-        m_frustrum.planes[4].normal.z = vp[2][3] + vp[2][2];
-        m_frustrum.planes[4].d = vp[3][3] + vp[3][2];
+        m_frustum.planes[4].normal.x = vp[0][3] + vp[0][2];
+        m_frustum.planes[4].normal.y = vp[1][3] + vp[1][2];
+        m_frustum.planes[4].normal.z = vp[2][3] + vp[2][2];
+        m_frustum.planes[4].d = vp[3][3] + vp[3][2];
 
         // Far plane
-        m_frustrum.planes[5].normal.x = vp[0][3] - vp[0][2];
-        m_frustrum.planes[5].normal.y = vp[1][3] - vp[1][2];
-        m_frustrum.planes[5].normal.z = vp[2][3] - vp[2][2];
-        m_frustrum.planes[5].d = vp[3][3] - vp[3][2];
+        m_frustum.planes[5].normal.x = vp[0][3] - vp[0][2];
+        m_frustum.planes[5].normal.y = vp[1][3] - vp[1][2];
+        m_frustum.planes[5].normal.z = vp[2][3] - vp[2][2];
+        m_frustum.planes[5].d = vp[3][3] - vp[3][2];
 
         // Normalize the planes
-        m_frustrum.Normalize();
+        m_frustum.Normalize();
     }
 
 private:
     Mat4 m_view{ Mat4::Identity() };
 	Mat4 m_projection{ Mat4::Identity() };
     Mat4 m_viewProjection{ Mat4::Identity() };
-    Frustrum m_frustrum{};
+    Frustrum m_frustum{};
 };

@@ -1,7 +1,7 @@
 #include <engine/graphics.hpp>
 
 #include <engine/macros.hpp>
-//#include <engine/enum.hpp>
+#include <engine/enum.hpp>
 #include <engine/string.hpp>
 #include <engine/hash_map.hpp>
 #include <engine/window.hpp>
@@ -37,6 +37,8 @@
 #define RENDERBUFFER_FREE_MEMORY_ATI                    0x87FD
 
 #define MAX_BOUND_VERTEX_BUFFERS                        16
+
+//#define GRAPHICS_OPENGL_BINDLESS
 
 class GraphicsOpenGL final : public Graphics
 {
@@ -132,6 +134,9 @@ public:
 
 public:
     u32 GetTextureHandle(GraphicsHandle texture);
+
+private:
+    GraphicsContext m_ctx{};
 };
 
 Graphics& Graphics::Get()
@@ -187,7 +192,8 @@ struct PipelineImpl
     GLuint program = 0;
     GLuint vao = 0;
 
-    GLenum faceCull = GL_CCW;
+    PipelineTopology topology = PipelineTopology::TRIANGLES;
+    PipelineFaceCull faceCull = PipelineFaceCull::CCW;
 
     bool depthEnable = true;
     bool blendEnable = true;
@@ -195,7 +201,7 @@ struct PipelineImpl
     GLuint bufferCount = 0;
 };
 
-constexpr float MAX_LOAD_FACTOR = 0.75f;
+constexpr f32 MAX_LOAD_FACTOR = 0.75f;
 
 static HashMap<GraphicsHandle, ShaderImpl> s_shaders;
 static HashMap<GraphicsHandle, BufferImpl> s_buffers;
@@ -220,8 +226,6 @@ GLuint GraphicsOpenGL::GetTextureHandle(GraphicsHandle texture)
     const auto& texture_impl = GetImpl(texture, s_textures);
     return texture_impl.texture;
 }
-
-//#define GRAPHICS_BINDLESS
 
 template <typename T>
 void RebalanceMap(std::unordered_map<GraphicsHandle, T>& map)
@@ -516,7 +520,7 @@ void GraphicsOpenGL::NewFrame()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // TODO: Find way to track GPU memory on Rpi
-    //int values[4] = { -1, -1, -1, -1 };
+    //i32 values[4] = { -1, -1, -1, -1 };
     //glGetIntegerv(GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, values);
     //if (values[0] > -1) Log::Info("GPU memory: {}", values[0]);
     //glGetIntegerv(TEXTURE_FREE_MEMORY_ATI, values);
@@ -558,53 +562,109 @@ void GraphicsOpenGL::SetRenderTarget(const GraphicsHandle renderTarget, const Gr
 {
     if (renderTarget == INVALID_GRAPHICS_HANDLE)
     {
+        // Bind the default framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return;
     }
 
     const auto& renderTarget_impl = GetImpl(renderTarget, s_textures);
 
-    //GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
-    //glNamedFramebufferDrawBuffers(framebuffer, 1, drawBuffers);
+    // Attach the color texture to the framebuffer
     glNamedFramebufferTexture(renderTarget_impl.fbo, GL_COLOR_ATTACHMENT0, renderTarget_impl.texture, 0);
 
+    // Attach the depth-stencil renderbuffer, if provided
     if (depthStencil != INVALID_GRAPHICS_HANDLE)
     {
         const auto& depthStencil_impl = GetImpl(depthStencil, s_textures);
         glNamedFramebufferRenderbuffer(renderTarget_impl.fbo, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencil_impl.rbo);
     }
 
+    // Validate the framebuffer
+    GLenum status = glCheckNamedFramebufferStatus(renderTarget_impl.fbo, GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        LOGE(GRAPHICS, "Framebuffer is incomplete: 0x%X", status);
+        return;
+    }
+
+    // Bind the framebuffer for rendering
     glBindFramebuffer(GL_FRAMEBUFFER, renderTarget_impl.fbo);
+
+    // Optionally, set the draw buffer (only one attachment in this case)
+    GLenum drawBuffer = GL_COLOR_ATTACHMENT0;
+    glNamedFramebufferDrawBuffers(renderTarget_impl.fbo, 1, &drawBuffer);
 }
 
 void GraphicsOpenGL::ReadPixels(u32 x, u32 y, u32 w, u32 h, void* pixelData, const GraphicsHandle renderTarget)
 {
     const auto& renderTarget_impl = GetImpl(renderTarget, s_textures);
 
-    glNamedFramebufferReadBuffer(renderTarget_impl.fbo, GL_COLOR_ATTACHMENT0);
-    glReadPixels(x, y, w, h, GL_RG_INTEGER, GL_UNSIGNED_INT, pixelData);
+    // Ensure the framebuffer is set before reading
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, renderTarget_impl.fbo);
+
+    // Read from the color attachment
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // Assuming 8-bit RGBA
 }
 
 void GraphicsOpenGL::SetViewport(const f32 viewport[4])
 {
-    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    // Set viewport directly using the provided dimensions
+    GLint x = static_cast<GLint>(viewport[0]);
+    GLint y = static_cast<GLint>(viewport[1]);
+    GLsizei w = static_cast<GLsizei>(viewport[2]);
+    GLsizei h = static_cast<GLsizei>(viewport[3]);
+    glViewport(x, y, w, h);
 }
 
-void GraphicsOpenGL::ClearRenderTarget(const GraphicsHandle rt, const float clearColor[4])
+void GraphicsOpenGL::ClearRenderTarget(const GraphicsHandle rt, const f32 clearColor[4])
 {
-    glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
-    glClear(GL_COLOR_BUFFER_BIT);
+    if (rt != INVALID_GRAPHICS_HANDLE)
+    {
+        const auto& renderTarget_impl = GetImpl(rt, s_textures);
 
-    //const float color[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    //glClearBufferfv(GL_COLOR, 0, color);
+        // Bind the framebuffer to clear
+        glBindFramebuffer(GL_FRAMEBUFFER, renderTarget_impl.fbo);
+
+        // Clear the color buffer with specified clear color
+        glClearBufferfv(GL_COLOR, 0, clearColor);
+    }
+    else
+    {
+        // Clear the default framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
 }
 
-void GraphicsOpenGL::ClearDepthStencil(const GraphicsHandle dt, GraphicsClearFlags flags, float depth, int stencil)
+void GraphicsOpenGL::ClearDepthStencil(const GraphicsHandle dt, GraphicsClearFlags flags, f32 depth, i32 stencil)
 {
-    GLbitfield mask = GL_DEPTH_BUFFER_BIT;
-    glClear(mask);
+    if (dt != INVALID_GRAPHICS_HANDLE)
+    {
+        const auto& depthStencil_impl = GetImpl(dt, s_textures);
 
-    //glClearBufferfi(GL_DEPTH_STENCIL, 0, 1.0f, 0);
+        // Bind the framebuffer to clear
+        glBindFramebuffer(GL_FRAMEBUFFER, depthStencil_impl.fbo);
+
+        // Clear depth and/or stencil
+        if (flags & GraphicsClearFlags::DEPTH)
+            glClearBufferfv(GL_DEPTH, 0, &depth);
+        
+        if (flags & GraphicsClearFlags::STENCIL)
+            glClearBufferiv(GL_STENCIL, 0, &stencil);
+    }
+    else
+    {
+        // Clear the default framebuffer depth/stencil
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        GLbitfield mask = 0;
+        if (flags & GraphicsClearFlags::DEPTH) mask |= GL_DEPTH_BUFFER_BIT;
+        if (flags & GraphicsClearFlags::STENCIL) mask |= GL_STENCIL_BUFFER_BIT;
+
+        glClear(mask);
+    }
 }
 
 GraphicsHandle GraphicsOpenGL::CreateShader(const ShaderInfo& info)
@@ -658,32 +718,15 @@ void GraphicsOpenGL::DestroyShader(const GraphicsHandle shader)
     s_shaders.erase(it);
 }
 
-static GLenum GetTextureFormat(TextureFormat format)
-{
-    switch (format)
-    {
-    case TextureFormat::RGB8_UNORM: return GL_RGB8;
-    case TextureFormat::RGBA8_UNORM: return GL_RGBA8;
-    case TextureFormat::RG32_UINT: return GL_RG32UI;
-    case TextureFormat::D24_UNORM_S8_UINT: return GL_DEPTH24_STENCIL8;
-
-    default:
-        FAIL("Texture format not supported!");
-        return 0;
-    }
-}
-
 GraphicsHandle GraphicsOpenGL::CreateTexture(const TextureInfo& info, const BufferData& data)
 {
     TextureImpl texture_impl;
 
     GLenum internalFormat = GetTextureFormat(info.format);
+    GLenum format = GetTextureBaseFormat(info.format);
+    GLenum type = GetTextureType(info.format);
 
-    // TODO:
-    GLenum format = GL_RGBA;// GetTextureFormat(info.format);
-    GLenum type = GL_UNSIGNED_BYTE;// GetTextureFormat(info.format);
-
-#ifdef GRAPHICS_BINDLESS
+#ifdef GRAPHICS_OPENGL_BINDLESS
     glCreateSamplers(1, &texture_impl.sampler);
     glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glSamplerParameteri(texture_impl.sampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -692,7 +735,10 @@ GraphicsHandle GraphicsOpenGL::CreateTexture(const TextureInfo& info, const Buff
 
     glCreateTextures(GL_TEXTURE_2D, 1, &texture_impl.texture);
     glTextureStorage2D(texture_impl.texture, 1, internalFormat, info.width, info.height);
-    glTextureSubImage2D(texture_impl.texture, 0, 0, 0, info.width, info.height, format, type, data.pData);
+
+    if (data.pData)
+        glTextureSubImage2D(texture_impl.texture, 0, 0, 0, info.width, info.height, format, type, data.pData);
+
     glGenerateTextureMipmap(texture_impl.texture);
 
     ENSURE(glGetTextureSamplerHandleARB != nullptr);
@@ -716,13 +762,13 @@ GraphicsHandle GraphicsOpenGL::CreateTexture(const TextureInfo& info, const Buff
     if ((i32)info.flags & (i32)TextureFlags::RENDER_TARGET)
     {
         glCreateFramebuffers(1, &texture_impl.fbo);
+        glNamedFramebufferTexture(texture_impl.fbo, GL_COLOR_ATTACHMENT0, texture_impl.texture, 0);
     }
 
     if ((i32)info.flags & (i32)TextureFlags::DEPTH_STENCIL)
     {
         glCreateRenderbuffers(1, &texture_impl.rbo);
         glNamedRenderbufferStorage(texture_impl.rbo, internalFormat, info.width, info.height);
-
     }
 
     s_textures.insert(std::make_pair(texture_impl.texture, texture_impl));
@@ -737,7 +783,7 @@ void GraphicsOpenGL::DestroyTexture(const GraphicsHandle texture)
 
     auto& texture_impl = it->second;
 
-#ifdef GRAPHICS_BINDLESS
+#ifdef GRAPHICS_OPENGL_BINDLESS
     // Make texture handle non-resident if it exists
     if (texture_impl.handle != 0)
         glMakeTextureHandleNonResidentARB(texture_impl.handle);
@@ -763,7 +809,6 @@ void GraphicsOpenGL::DestroyTexture(const GraphicsHandle texture)
     s_textures.erase(it);
 }
 
-
 GraphicsHandle GraphicsOpenGL::CreateResourceBinding(const ResourceBindingInfo& info)
 {
     ResourceBindingImpl resource_impl;
@@ -788,6 +833,11 @@ GraphicsHandle GraphicsOpenGL::CreateResourceBinding(const ResourceBindingInfo& 
 
 void GraphicsOpenGL::DestroyResourceBinding(const GraphicsHandle resources)
 {
+    auto it = s_resources.find(resources);
+    if (it != s_resources.end())
+    {
+        s_resources.erase(it);
+    }
 }
 
 void GraphicsOpenGL::BindResource(const GraphicsHandle resources, const char* name, GraphicsHandle resource)
@@ -852,6 +902,8 @@ GraphicsHandle GraphicsOpenGL::CreatePipeline(const PipelineInfo& info)
     PipelineImpl pipeline_impl;
     pipeline_impl.program = program_handle;
     pipeline_impl.vao = vao_handle;
+    pipeline_impl.topology = info.topology;
+    pipeline_impl.faceCull = info.faceCull;
     pipeline_impl.depthEnable = info.depthEnable;
     pipeline_impl.blendEnable = info.blendEnable;
     s_pipelines.insert(std::make_pair(program_handle, pipeline_impl));
@@ -861,6 +913,19 @@ GraphicsHandle GraphicsOpenGL::CreatePipeline(const PipelineInfo& info)
 
 void GraphicsOpenGL::DestroyPipeline(const GraphicsHandle pipeline)
 {
+    auto it = s_pipelines.find(pipeline);
+    if (it == s_pipelines.end())
+        return;
+
+    const auto& pipeline_impl = it->second;
+
+    if (pipeline_impl.program != 0)
+        glDeleteProgram(pipeline_impl.program);
+
+    if (pipeline_impl.vao != 0)
+        glDeleteVertexArrays(1, &pipeline_impl.vao);
+
+    s_pipelines.erase(it);
 }
 
 void GraphicsOpenGL::SetPipeline(const GraphicsHandle pipeline)
@@ -868,9 +933,15 @@ void GraphicsOpenGL::SetPipeline(const GraphicsHandle pipeline)
     auto& pipeline_impl = GetImpl(pipeline, s_pipelines);
     pipeline_impl.bufferCount = 0;
 
-    glEnable(GL_CULL_FACE);
-    //glDisable(GL_CULL_FACE);
-    glFrontFace(pipeline_impl.faceCull);
+    if (pipeline_impl.faceCull == PipelineFaceCull::NONE)
+    {
+        glDisable(GL_CULL_FACE);
+    }
+    else
+    {
+        glEnable(GL_CULL_FACE);
+        glFrontFace(GetCullMode(pipeline_impl.faceCull));
+    }
 
     pipeline_impl.depthEnable ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
     pipeline_impl.blendEnable ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
@@ -880,6 +951,8 @@ void GraphicsOpenGL::SetPipeline(const GraphicsHandle pipeline)
 
     glUseProgram(pipeline_impl.program);
     glBindVertexArray(pipeline_impl.vao);
+
+    m_ctx.currentPipeline = pipeline;
 }
 
 void GraphicsOpenGL::SetUniform(const GraphicsHandle pipeline, StringView name, GraphicsValueType valueType, u32 count, u8* data)
@@ -928,7 +1001,7 @@ void GraphicsOpenGL::CommitResources(const GraphicsHandle pipeline, const Graphi
 
                 GLint location = glGetUniformLocation(pipeline_impl.program, entry.first.c_str());
 
-#ifdef GRAPHICS_BINDLESS
+#ifdef GRAPHICS_OPENGL_BINDLESS
                 glUniformHandleui64ARB(location, texture_impl.handle);
 #else
                 glActiveTexture(GL_TEXTURE0);
@@ -942,59 +1015,10 @@ void GraphicsOpenGL::CommitResources(const GraphicsHandle pipeline, const Graphi
     }
 }
 
-static bool GetBufferInfo(const BufferInfo& info, GLenum& target, GLenum& usage)
-{
-    switch (info.type)
-    {
-    case BufferType::VERTEX_BUFFER:
-        target = GL_ARRAY_BUFFER;
-        break;
-
-    case BufferType::INDEX_BUFFER:
-        target = GL_ELEMENT_ARRAY_BUFFER;
-        break;
-
-    case BufferType::UNIFORM_BUFFER:
-        target = GL_UNIFORM_BUFFER;
-        break;
-
-    case BufferType::STORAGE_BUFFER:
-        target = GL_SHADER_STORAGE_BUFFER;
-        break;
-
-    default:
-        LOGE(Graphics, "Bind flag not supported!");
-        return false;
-    }
-
-    switch (info.usage)
-    {
-    case BufferUsage::IMMUTABLE:
-        usage = GL_STATIC_DRAW;
-        break;
-
-    case BufferUsage::DEFAULT:
-        usage = GL_DYNAMIC_DRAW;
-        break;
-
-    case BufferUsage::DYNAMIC:
-        usage = GL_STREAM_DRAW;
-        break;
-
-    default:
-        LOGE(Graphics, "Usage flag not supported!");
-        return false;
-    }
-
-    return true;
-}
-
 GraphicsHandle GraphicsOpenGL::CreateBuffer(const BufferInfo& info, const BufferData& data)
 {
-    GLenum target = 0;
-    GLenum usage = 0;
-    if (!GetBufferInfo(info, target, usage))
-        return INVALID_GRAPHICS_HANDLE;
+    GLenum target = GetBufferTarget(info.type);
+    GLenum usage = GetBufferUsage(info.usage);
 
     GLuint buffer_handle;
     glCreateBuffers(1, &buffer_handle);
@@ -1013,6 +1037,12 @@ GraphicsHandle GraphicsOpenGL::CreateBuffer(const BufferInfo& info, const Buffer
 
 void GraphicsOpenGL::DestroyBuffer(const GraphicsHandle buffer)
 {
+    auto it = s_buffers.find(buffer);
+    if (it != s_buffers.end())
+    {
+        glDeleteBuffers(1, &it->second.handle);
+        s_buffers.erase(it);
+    }
 }
 
 void GraphicsOpenGL::UpdateBuffer(const GraphicsHandle buffer, const BufferData& data)
@@ -1043,28 +1073,12 @@ void GraphicsOpenGL::SetIndexBuffer(const GraphicsHandle buffer, i32 i)
 
 void GraphicsOpenGL::Draw(const DrawAttribs& attribs)
 {
-    glDrawArrays(GL_LINES, 0, attribs.numVertices);
+    auto& pipeline_impl = GetImpl(m_ctx.currentPipeline, s_pipelines);
+    glDrawArrays(GetTopologyMode(pipeline_impl.topology), 0, attribs.numVertices);
 }
 
 void GraphicsOpenGL::DrawIndexed(const DrawIndexedAttribs& attribs)
 {
-    glDrawElements(GL_TRIANGLE_STRIP, attribs.numIndices, GL_UNSIGNED_INT, 0);
+    auto& pipeline_impl = GetImpl(m_ctx.currentPipeline, s_pipelines);
+    glDrawElements(GetTopologyMode(pipeline_impl.topology), attribs.numIndices, GetValueType(attribs.indexType), 0);
 }
-
-//void GraphicsOpenGL::DebugDraw(const Mat4& viewProj, const DebugDrawAttribs& attribs, const List<DebugVertex>& vertices)
-//{
-//    glNamedBufferData(g_debugVbo, vertices.size() * sizeof(DebugVertex), vertices.data(), GL_DYNAMIC_DRAW);
-//    
-//    glDisable(GL_DEPTH_TEST);
-//    //glEnable(GL_DEPTH_TEST);
-//
-//    glUseProgram(g_debugShader);
-//    glProgramUniformMatrix4fv(g_debugShader, glGetUniformLocation(g_debugShader, "ViewProjMtx"), 1, GL_FALSE, (GLfloat*)&viewProj);
-//
-//    glVertexArrayVertexBuffer(g_debugVao, 0, g_debugVbo, 0, sizeof(DebugVertex));
-//    glBindVertexArray(g_debugVao);
-//    glDrawArrays(GL_LINES, 0, (GLsizei)vertices.size());
-//
-//    glUseProgram(0);
-//    glBindVertexArray(0);
-//}

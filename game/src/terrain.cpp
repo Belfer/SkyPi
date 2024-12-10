@@ -120,8 +120,8 @@ void Terrain::Initialize()
         pipeInfo.renderTargetFormats[0] = Graphics::Get().GetColorBufferFormat();
         pipeInfo.depthStencilFormat = Graphics::Get().GetDepthBufferFormat();
 
-        pipeInfo.topology = PipelineTopology::TRIANGLES;
-        pipeInfo.faceCull = PipelineFaceCull::CW;
+        pipeInfo.topology = PipelineTopology::TRIANGLE_STRIP;
+        pipeInfo.faceCull = PipelineFaceCull::CCW;
         pipeInfo.depthEnable = true;
 
         LayoutElement layoutElems[] =
@@ -442,8 +442,6 @@ void Terrain::Update(const Vec3& position)
         return;
 }
 
-#include <engine/window.hpp>
-
 void Terrain::Render(const Camera& camera)
 {
     if (!m_fileStream.is_open())
@@ -457,18 +455,20 @@ void Terrain::Render(const Camera& camera)
     Graphics::Get().SetPipeline(m_pipeline);
     Graphics::Get().CommitResources(m_pipeline, m_resources);
 
-    if (true || Window::Get().GetKey(Key::Z))
-        m_prevFrustrum = camera.GetFrustrum();
+    if (m_updateFrustum)
+        m_frustum = camera.GetFrustum();
+    if (m_debugDraw) {} // TODO: Draw frustum
 
     for (const auto& cell : m_cells)
     {
-        DebugDraw::Get().Box(cell.aabb, 0xFFFFFFFF);
+        if (m_debugDraw)
+            DebugDraw::Get().Box(cell.aabb, 0xFFFFFFFF);
 
         if (cell.vertexBuffer == INVALID_GRAPHICS_HANDLE ||
             cell.indexBuffer == INVALID_GRAPHICS_HANDLE)
             continue;
 
-        if (!Shape::Overlaps(m_prevFrustrum, cell.aabb))
+        if (!Shape::Overlaps(m_frustum, cell.aabb))
             continue;
 
         const u64 offset = 0;

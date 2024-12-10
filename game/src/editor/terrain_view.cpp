@@ -73,4 +73,14 @@ void Inspector<Terrain>::Inspect(Terrain& terrain)
     ImGui::Text("Light I: ");
     ImGui::SameLine();
     ImGui::InputFloat("##LightI", &terrain.m_drawData.lightI);
+
+    ImGui::SeparatorText("Debug");
+    
+    ImGui::Text("Debug Draw: ");
+    ImGui::SameLine();
+    ImGui::Checkbox("##DebugDraw", &terrain.m_debugDraw);
+
+    ImGui::Text("Update Frustum: ");
+    ImGui::SameLine();
+    ImGui::Checkbox("##UpdateFrustum", &terrain.m_updateFrustum);
 }

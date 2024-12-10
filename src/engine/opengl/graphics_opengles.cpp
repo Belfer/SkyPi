@@ -135,7 +135,7 @@ public:
     u32 GetTextureHandle(GraphicsHandle texture);
 
 private:
-    GraphicsHandle m_currentBoundPipeline = INVALID_GRAPHICS_HANDLE;
+    GraphicsContext m_ctx{};
 };
 
 Graphics& Graphics::Get()
@@ -195,7 +195,8 @@ struct PipelineImpl
     LayoutElement layoutElements[MAX_LAYOUT_ELEMS];
     u32 numElements = 0;
 
-    GLenum faceCull = GL_CCW;
+    PipelineTopology topology = PipelineTopology::TRIANGLES;
+    PipelineFaceCull faceCull = PipelineFaceCull::CCW;
 
     bool depthEnable = true;
     bool blendEnable = true;
@@ -203,7 +204,7 @@ struct PipelineImpl
     GLuint bufferCount = 0;
 };
 
-constexpr float MAX_LOAD_FACTOR = 0.75f;
+constexpr f32 MAX_LOAD_FACTOR = 0.75f;
 
 static HashMap<GraphicsHandle, ShaderImpl> s_shaders;
 static HashMap<GraphicsHandle, BufferImpl> s_buffers;
@@ -407,7 +408,7 @@ void GraphicsOpenGLES::NewFrame()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // TODO: Find way to track GPU memory on Rpi
-    //int values[4] = { -1, -1, -1, -1 };
+    //i32 values[4] = { -1, -1, -1, -1 };
     //glGetIntegerv(GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, values);
     //if (values[0] > -1) Log::Info("GPU memory: {}", values[0]);
     //glGetIntegerv(TEXTURE_FREE_MEMORY_ATI, values);
@@ -449,6 +450,7 @@ void GraphicsOpenGLES::SetRenderTarget(const GraphicsHandle renderTarget, const 
 {
     if (renderTarget == INVALID_GRAPHICS_HANDLE)
     {
+        // Bind the default framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return;
     }
@@ -461,11 +463,19 @@ void GraphicsOpenGLES::SetRenderTarget(const GraphicsHandle renderTarget, const 
     // Attach the color texture
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTarget_impl.texture, 0);
 
-    // Attach the depth-stencil renderbuffer if specified
+    // Attach the depth-stencil renderbuffer, if provided
     if (depthStencil != INVALID_GRAPHICS_HANDLE)
     {
         const auto& depthStencil_impl = GetImpl(depthStencil, s_textures);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencil_impl.rbo);
+    }
+
+    // Validate the framebuffer
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        LOGE(GRAPHICS, "Framebuffer is incomplete: 0x%X", status);
+        return;
     }
 }
 
@@ -486,13 +496,14 @@ void GraphicsOpenGLES::ReadPixels(u32 x, u32 y, u32 w, u32 h, void* pixelData, c
 void GraphicsOpenGLES::SetViewport(const f32 viewport[4])
 {
     // Set the viewport
-    glViewport(static_cast<GLint>(viewport[0]),
-        static_cast<GLint>(viewport[1]),
-        static_cast<GLsizei>(viewport[2]),
-        static_cast<GLsizei>(viewport[3]));
+    GLint x = static_cast<GLint>(viewport[0]);
+    GLint y = static_cast<GLint>(viewport[1]);
+    GLsizei w = static_cast<GLsizei>(viewport[2]);
+    GLsizei h = static_cast<GLsizei>(viewport[3]);
+    glViewport(x, y, w, h);
 }
 
-void GraphicsOpenGLES::ClearRenderTarget(const GraphicsHandle rt, const float clearColor[4])
+void GraphicsOpenGLES::ClearRenderTarget(const GraphicsHandle rt, const f32 clearColor[4])
 {
     if (rt != INVALID_GRAPHICS_HANDLE)
     {
@@ -517,7 +528,7 @@ void GraphicsOpenGLES::ClearRenderTarget(const GraphicsHandle rt, const float cl
     }
 }
 
-void GraphicsOpenGLES::ClearDepthStencil(const GraphicsHandle dt, GraphicsClearFlags flags, float depth, int stencil)
+void GraphicsOpenGLES::ClearDepthStencil(const GraphicsHandle dt, GraphicsClearFlags flags, f32 depth, i32 stencil)
 {
     if (dt != INVALID_GRAPHICS_HANDLE)
     {
@@ -623,43 +634,12 @@ void GraphicsOpenGLES::DestroyShader(const GraphicsHandle shader)
     s_shaders.erase(it);
 }
 
-static GLenum GetTextureFormat(TextureFormat format)
-{
-    switch (format)
-    {
-    case TextureFormat::RGB8_UNORM:         return GL_RGB;
-    case TextureFormat::RGBA8_UNORM:       return GL_RGBA;
-    case TextureFormat::RG32_UINT:         return GL_RG_INTEGER;
-    case TextureFormat::D24_UNORM_S8_UINT: return GL_DEPTH_STENCIL;
-
-    default:
-        FAIL("Texture format not supported!");
-        return 0;
-    }
-}
-
-static GLenum GetTextureType(TextureFormat format)
-{
-    switch (format)
-    {
-    case TextureFormat::RGB8_UNORM:
-    case TextureFormat::RGBA8_UNORM:       return GL_UNSIGNED_BYTE;
-    case TextureFormat::RG32_UINT:         return GL_UNSIGNED_INT;
-    case TextureFormat::D24_UNORM_S8_UINT: return GL_UNSIGNED_INT_24_8;
-
-    default:
-        FAIL("Texture type not supported!");
-        return 0;
-    }
-}
-
 GraphicsHandle GraphicsOpenGLES::CreateTexture(const TextureInfo& info, const BufferData& data)
 {
     TextureImpl texture_impl;
 
-    // Get the internal format, format, and type for the texture
     GLenum internalFormat = GetTextureFormat(info.format);
-    GLenum format = internalFormat; // OpenGL ES 3.1 typically uses the same for format and internalFormat
+    GLenum format = GetTextureBaseFormat(info.format);
     GLenum type = GetTextureType(info.format);
 
     // Create and bind the texture
@@ -816,6 +796,8 @@ GraphicsHandle GraphicsOpenGLES::CreatePipeline(const PipelineInfo& info)
     PipelineImpl pipeline_impl;
     pipeline_impl.program = program_handle;
     pipeline_impl.vao = vao_handle;
+    pipeline_impl.topology = info.topology;
+    pipeline_impl.faceCull = info.faceCull;
     pipeline_impl.depthEnable = info.depthEnable;
     pipeline_impl.blendEnable = info.blendEnable;
 
@@ -852,9 +834,16 @@ void GraphicsOpenGLES::SetPipeline(const GraphicsHandle pipeline)
     auto& pipeline_impl = GetImpl(pipeline, s_pipelines);
     pipeline_impl.bufferCount = 0;
 
-    glEnable(GL_CULL_FACE);
-    glFrontFace(pipeline_impl.faceCull);
-
+    if (pipeline_impl.faceCull == PipelineFaceCull::NONE)
+    {
+        glDisable(GL_CULL_FACE);
+    }
+    else
+    {
+        glEnable(GL_CULL_FACE);
+        glFrontFace(GetCullMode(pipeline_impl.faceCull));
+    }
+    
     pipeline_impl.depthEnable ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
     pipeline_impl.blendEnable ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -862,7 +851,7 @@ void GraphicsOpenGLES::SetPipeline(const GraphicsHandle pipeline)
     glUseProgram(pipeline_impl.program);
     glBindVertexArray(pipeline_impl.vao);
 
-    m_currentBoundPipeline = pipeline;
+    m_ctx.currentPipeline = pipeline;
 }
 
 void GraphicsOpenGLES::SetUniform(const GraphicsHandle pipeline, StringView name, GraphicsValueType valueType, u32 count, u8* data)
@@ -925,59 +914,10 @@ void GraphicsOpenGLES::CommitResources(const GraphicsHandle pipeline, const Grap
     }
 }
 
-static bool GetBufferInfo(const BufferInfo& info, GLenum& target, GLenum& usage)
-{
-    switch (info.type)
-    {
-    case BufferType::VERTEX_BUFFER:
-        target = GL_ARRAY_BUFFER;
-        break;
-
-    case BufferType::INDEX_BUFFER:
-        target = GL_ELEMENT_ARRAY_BUFFER;
-        break;
-
-    case BufferType::UNIFORM_BUFFER:
-        target = GL_UNIFORM_BUFFER;
-        break;
-
-    case BufferType::STORAGE_BUFFER:
-        target = GL_SHADER_STORAGE_BUFFER;
-        break;
-
-    default:
-        LOGE(Graphics, "Bind flag not supported!");
-        return false;
-    }
-
-    switch (info.usage)
-    {
-    case BufferUsage::IMMUTABLE:
-        usage = GL_STATIC_DRAW;
-        break;
-
-    case BufferUsage::DEFAULT:
-        usage = GL_DYNAMIC_DRAW;
-        break;
-
-    case BufferUsage::DYNAMIC:
-        usage = GL_STREAM_DRAW;
-        break;
-
-    default:
-        LOGE(Graphics, "Usage flag not supported!");
-        return false;
-    }
-
-    return true;
-}
-
 GraphicsHandle GraphicsOpenGLES::CreateBuffer(const BufferInfo& info, const BufferData& data)
 {
-    GLenum target = 0;
-    GLenum usage = 0;
-    if (!GetBufferInfo(info, target, usage))
-        return INVALID_GRAPHICS_HANDLE;
+    GLenum target = GetBufferTarget(info.type);
+    GLenum usage = GetBufferUsage(info.usage);
 
     GLuint buffer_handle;
     glGenBuffers(1, &buffer_handle);
@@ -1016,7 +956,7 @@ void GraphicsOpenGLES::UpdateBuffer(const GraphicsHandle buffer, const BufferDat
 
 void GraphicsOpenGLES::SetVertexBuffers(i32 startSlot, i32 count, const GraphicsHandle* pBuffers, const u64* offsets)
 {
-    auto& pipeline_impl = GetImpl(m_currentBoundPipeline, s_pipelines);
+    auto& pipeline_impl = GetImpl(m_ctx.currentPipeline, s_pipelines);
 
     for (i32 i = 0; i < count; ++i)
     {
@@ -1055,12 +995,12 @@ void GraphicsOpenGLES::SetIndexBuffer(const GraphicsHandle buffer, i32 i)
 
 void GraphicsOpenGLES::Draw(const DrawAttribs& attribs)
 {
-    glDrawArrays(GL_LINES, 0, attribs.numVertices);
-    //glDrawArrays(GL_TRIANGLES, attribs.vertexOffset, attribs.numVertices);
+    auto& pipeline_impl = GetImpl(m_ctx.currentPipeline, s_pipelines);
+    glDrawArrays(GetTopologyMode(pipeline_impl.topology), 0, attribs.numVertices);
 }
 
 void GraphicsOpenGLES::DrawIndexed(const DrawIndexedAttribs& attribs)
 {
-    glDrawElements(GL_TRIANGLE_STRIP, attribs.numIndices, GL_UNSIGNED_INT, 0);
-    //glDrawElements(GL_TRIANGLES, attribs.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(attribs.indexOffset));
+    auto& pipeline_impl = GetImpl(m_ctx.currentPipeline, s_pipelines);
+    glDrawElements(GetTopologyMode(pipeline_impl.topology), attribs.numIndices, GetValueType(attribs.indexType), 0);
 }

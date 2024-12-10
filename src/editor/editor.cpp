@@ -501,7 +501,7 @@ namespace ImGui
 		// Sliders and other interactive components
 		colors[ImGuiCol_SliderGrab] = interactiveColor;      // Slider handle with transparency
 		colors[ImGuiCol_SliderGrabActive] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f); // Active slider handle
-		colors[ImGuiCol_CheckMark] = interactiveColor;       // Checkbox checkmark with transparency
+		//colors[ImGuiCol_CheckMark] = interactiveColor;       // Checkbox checkmark with transparency
 
 		// Tabs
 		colors[ImGuiCol_Tab] = ImVec4(interactiveColor.x, interactiveColor.y, interactiveColor.z, 0.35f); // Subtle tab background
