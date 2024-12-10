@@ -2,11 +2,39 @@
 #include <editor/terrain_view.hpp>
 #include <engine/time.hpp>
 
-SkyPiEditor::SkyPiEditor()
+class SkyPiEditorView final : public Editor
 {
-    //SetTitle("SkyPi");
-    //SetPresistent(true);
-    //SetExclusive(true);
+public:
+    SkyPiEditorView();
+    void OnGui() override;
+
+private:
+    f32 m_timer{ 1.f };
+    i32 m_frames{ 0 };
+    i32 m_fps{ 0 };
+};
+
+SkyPiEditorView::SkyPiEditorView()
+{
+    SetTitle("SkyPi");
+    SetPresistent(true);
+    SetExclusive(true);
+}
+
+void SkyPiEditorView::OnGui()
+{
+    m_frames++;
+    m_timer += Time::Get().DeltaTime();
+    if (m_timer >= 1.f)
+    {
+        m_fps = (i32)(m_frames / m_timer);
+        m_frames = 0;
+        m_timer = Math::FMod(m_timer, 1.f);
+    }
+
+    CString<64> fps;
+    fps.format("FPS: {}", m_fps);
+    ImGui::Text(fps);
 }
 
 void SkyPiEditor::Configure()
@@ -39,6 +67,7 @@ void SkyPiEditor::Configure()
             }
         });
 
+    EditorManager::Get().AddEditor(meta::make_unique<SkyPiEditorView>());
     EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
 }
 
@@ -61,19 +90,3 @@ void SkyPiEditor::Shutdown()
 {
     m_game.Shutdown();
 }
-
-//void SkyPiEditor::OnGui()
-//{
-//    m_frames++;
-//    m_timer += Time::Get().DeltaTime();
-//    if (m_timer >= 1.f)
-//    {
-//        m_fps = (i32)(m_frames / m_timer);
-//        m_frames = 0;
-//        m_timer = Math::FMod(m_timer, 1.f);
-//    }
-//
-//    CString<64> fps;
-//    fps.format("FPS: {}", m_fps);
-//    ImGui::Text(fps);
-//}

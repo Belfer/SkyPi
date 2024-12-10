@@ -67,6 +67,7 @@ void main()
 
     //p_color = vec4(1);
     //p_color = vec4(uv, 0, 1);
+    //p_color = vec4(N, 1);
     //p_color = vec4(N * 0.5 + 0.5, 1);
     //p_color = vec4(vec3(diffuse), 1);
     //p_color = albedo;

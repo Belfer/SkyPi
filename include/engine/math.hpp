@@ -31,7 +31,6 @@ namespace Math
 		return (a < b) ? a : b;
 	}
 
-
 	template <typename T>
 	static T Clamp(const T& x, const T& min, const T& max)
 	{
@@ -145,6 +144,16 @@ struct Vec3
 	static Vec3 Lerp(const Vec3& a, const Vec3& b, f32 t);
 
 	static Vec3 FromValuePtr(f32* v);
+
+	static Vec3 Min(const Vec3& a, const Vec3& b)
+	{
+		return Vec3(Math::Min(a.x, b.x), Math::Min(a.y, b.y), Math::Min(a.z, b.z));
+	}
+
+	static Vec3 Max(const Vec3& a, const Vec3& b)
+	{
+		return Vec3(Math::Max(a.x, b.x), Math::Max(a.y, b.y), Math::Max(a.z, b.z));
+	}
 };
 
 struct Vec4

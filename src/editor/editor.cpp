@@ -435,6 +435,8 @@ namespace ImGui
 	static void StyleSeeThrough()
 	{
 		ImVec4* colors = ImGui::GetStyle().Colors;
+
+		// Original colors (unchanged)
 		colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
 		colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.10f, 0.86f);
@@ -442,9 +444,6 @@ namespace ImGui
 		colors[ImGuiCol_PopupBg] = ImVec4(0.19f, 0.19f, 0.19f, 1.00f);
 		colors[ImGuiCol_Border] = ImVec4(0.19f, 0.19f, 0.19f, 0.29f);
 		colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-		colors[ImGuiCol_FrameBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.75f);
-		colors[ImGuiCol_FrameBgHovered] = ImVec4(0.43f, 0.43f, 0.43f, 0.67f);
-		colors[ImGuiCol_FrameBgActive] = ImVec4(0.34f, 0.34f, 0.34f, 1.00f);
 		colors[ImGuiCol_TitleBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.10f);
 		colors[ImGuiCol_TitleBgActive] = ImVec4(0.00f, 0.00f, 0.00f, 0.10f);
 		colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.10f);
@@ -456,9 +455,6 @@ namespace ImGui
 		colors[ImGuiCol_CheckMark] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		colors[ImGuiCol_SliderGrab] = ImVec4(1.00f, 1.00f, 1.00f, 0.56f);
 		colors[ImGuiCol_SliderGrabActive] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-		colors[ImGuiCol_Button] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-		colors[ImGuiCol_ButtonHovered] = ImVec4(0.64f, 0.64f, 0.64f, 1.00f);
-		colors[ImGuiCol_ButtonActive] = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
 		colors[ImGuiCol_Header] = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
 		colors[ImGuiCol_HeaderHovered] = ImVec4(0.00f, 0.00f, 0.00f, 0.36f);
 		colors[ImGuiCol_HeaderActive] = ImVec4(0.20f, 0.22f, 0.23f, 0.33f);
@@ -489,13 +485,35 @@ namespace ImGui
 		colors[ImGuiCol_NavWindowingDimBg] = ImVec4(1.00f, 0.00f, 0.00f, 0.20f);
 		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.0f, 1.0f, 1.0f, 0.40f);
 
+		// Updated interactive elements with the purple-blueish color (R:78, G:68, B:137)
+		ImVec4 interactiveColor = ImVec4(78.0f / 255.0f, 68.0f / 255.0f, 137.0f / 255.0f, 0.45f); // Lower alpha for less pop
+
+		// Frame backgrounds (input areas, buttons, etc)
+		colors[ImGuiCol_FrameBg] = ImVec4(interactiveColor.x, interactiveColor.y, interactiveColor.z, 0.25f); // Less bright input field background
+		colors[ImGuiCol_FrameBgHovered] = ImVec4(0.43f, 0.43f, 0.43f, 0.60f); // Hovered frame background
+		colors[ImGuiCol_FrameBgActive] = ImVec4(0.34f, 0.34f, 0.34f, 0.75f); // Active frame background
+
+		// Buttons and interactions
+		colors[ImGuiCol_Button] = interactiveColor;          // Normal button with transparency
+		colors[ImGuiCol_ButtonHovered] = ImVec4(0.64f, 0.64f, 0.64f, 0.75f); // Hovered button with transparency
+		colors[ImGuiCol_ButtonActive] = ImVec4(0.20f, 0.22f, 0.23f, 0.75f); // Active button with transparency
+
+		// Sliders and other interactive components
+		colors[ImGuiCol_SliderGrab] = interactiveColor;      // Slider handle with transparency
+		colors[ImGuiCol_SliderGrabActive] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f); // Active slider handle
+		colors[ImGuiCol_CheckMark] = interactiveColor;       // Checkbox checkmark with transparency
+
+		// Tabs
+		colors[ImGuiCol_Tab] = ImVec4(interactiveColor.x, interactiveColor.y, interactiveColor.z, 0.35f); // Subtle tab background
+		colors[ImGuiCol_TabHovered] = ImVec4(0.40f, 0.40f, 0.40f, 0.75f); // Hovered tab with transparency
+		colors[ImGuiCol_TabActive] = ImVec4(0.32f, 0.32f, 0.32f, 0.85f); // Active tab with subtle transparency
+
+		// Style settings (unchanged)
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.WindowPadding = ImVec2(8.00f, 8.00f);
 		style.FramePadding = ImVec2(5.00f, 2.00f);
 		style.ItemSpacing = ImVec2(6.00f, 6.00f);
 		style.ItemInnerSpacing = ImVec2(6.00f, 6.00f);
-		style.TouchExtraPadding = ImVec2(0.00f, 0.00f);
-		style.IndentSpacing = 25;
 		style.ScrollbarSize = 15;
 		style.GrabMinSize = 10;
 		style.WindowBorderSize = 1;
@@ -511,6 +529,5 @@ namespace ImGui
 		style.GrabRounding = 3;
 		style.LogSliderDeadzone = 4;
 		style.TabRounding = 4;
-		style.FrameBorderSize = 0;
 	}
 }

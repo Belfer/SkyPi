@@ -219,6 +219,7 @@ public:
 	void Shutdown();
 
 	void Line(const Vec3& a, const Vec3& b, u32 color);
+	void Box(const Box3& box, u32 color);
 
 	void Render(const Mat4& viewProj);
 	void Clear();

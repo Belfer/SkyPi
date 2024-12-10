@@ -22,17 +22,40 @@ public:
 
         // Extract planes from the VP matrix
         // Left plane
-        m_frustrum.planes[0] = vp[3] + vp[0];
+        m_frustrum.planes[0].normal.x = vp[0][3] + vp[0][0];
+        m_frustrum.planes[0].normal.y = vp[1][3] + vp[1][0];
+        m_frustrum.planes[0].normal.z = vp[2][3] + vp[2][0];
+        m_frustrum.planes[0].d = vp[3][3] + vp[3][0];
+
         // Right plane
-        m_frustrum.planes[1] = vp[3] - vp[0];
+        m_frustrum.planes[1].normal.x = vp[0][3] - vp[0][0];
+        m_frustrum.planes[1].normal.y = vp[1][3] - vp[1][0];
+        m_frustrum.planes[1].normal.z = vp[2][3] - vp[2][0];
+        m_frustrum.planes[1].d = vp[3][3] - vp[3][0];
+
         // Bottom plane
-        m_frustrum.planes[2] = vp[3] + vp[1];
+        m_frustrum.planes[2].normal.x = vp[0][3] + vp[0][1];
+        m_frustrum.planes[2].normal.y = vp[1][3] + vp[1][1];
+        m_frustrum.planes[2].normal.z = vp[2][3] + vp[2][1];
+        m_frustrum.planes[2].d = vp[3][3] + vp[3][1];
+
         // Top plane
-        m_frustrum.planes[3] = vp[3] - vp[1];
+        m_frustrum.planes[3].normal.x = vp[0][3] - vp[0][1];
+        m_frustrum.planes[3].normal.y = vp[1][3] - vp[1][1];
+        m_frustrum.planes[3].normal.z = vp[2][3] - vp[2][1];
+        m_frustrum.planes[3].d = vp[3][3] - vp[3][1];
+
         // Near plane
-        m_frustrum.planes[4] = vp[3] + vp[2];
+        m_frustrum.planes[4].normal.x = vp[0][3] + vp[0][2];
+        m_frustrum.planes[4].normal.y = vp[1][3] + vp[1][2];
+        m_frustrum.planes[4].normal.z = vp[2][3] + vp[2][2];
+        m_frustrum.planes[4].d = vp[3][3] + vp[3][2];
+
         // Far plane
-        m_frustrum.planes[5] = vp[3] - vp[2];
+        m_frustrum.planes[5].normal.x = vp[0][3] - vp[0][2];
+        m_frustrum.planes[5].normal.y = vp[1][3] - vp[1][2];
+        m_frustrum.planes[5].normal.z = vp[2][3] - vp[2][2];
+        m_frustrum.planes[5].d = vp[3][3] - vp[3][2];
 
         // Normalize the planes
         m_frustrum.Normalize();

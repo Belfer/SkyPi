@@ -13,7 +13,7 @@
 struct TerrainDrawData
 {
     Vec4 color{ 1, 1, 1, 1 };
-    Vec3 lightDir{ 0, 1, 0 };
+    Vec3 lightDir{ 0, -1, 0 };
     f32 lightI{ 1 };
 };
 
@@ -94,4 +94,6 @@ private:
     u32 m_maxCells{ 100 };
     f32 m_viewDistance{ 1000.f };
     List<Cell> m_cells;
+
+    Frustrum m_prevFrustrum;
 };

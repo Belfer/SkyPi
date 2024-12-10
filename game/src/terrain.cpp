@@ -198,9 +198,9 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
     const i32 height = heightmap.height;
     const u16* data = reinterpret_cast<const u16*>(heightmap.data);
 
-    const u32 cellSize = Cell::Length;
-    const i32 cellsX = (width + cellSize - 1) / cellSize;
-    const i32 cellsY = (height + cellSize - 1) / cellSize;
+    const u32 cellSize = Cell::Length; // Each cell is 128+1
+    const i32 cellsX = (width + cellSize - 1) / cellSize;  // Number of cells in X direction
+    const i32 cellsY = (height + cellSize - 1) / cellSize; // Number of cells in Y direction
 
     // Write header
     outFile.seekp(0);
@@ -208,25 +208,60 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
     outFile.write((char*)&height, sizeof(i32));
 
     // Write cells
-    Cell::Buffer cellBuffer;
+    static Cell::Buffer cellBuffer;
     for (u32 y = 0; y < cellsY; ++y)
     {
         for (u32 x = 0; x < cellsX; ++x)
         {
+            // Fill the cell buffer, including the padding
             for (i32 cy = 0; cy < cellSize; ++cy)
             {
                 for (i32 cx = 0; cx < cellSize; ++cx)
                 {
-                    i32 globalX = x * cellSize + cx;
-                    i32 globalY = y * cellSize + cy;
+                    i32 globalX = x * (cellSize - 1) + cx;  // Adjusted for 128 data points
+                    i32 globalY = y * (cellSize - 1) + cy;  // Adjusted for 128 data points
+
                     if (globalX < width && globalY < height)
                     {
+                        // Fill the buffer with the actual data for this cell position
                         cellBuffer[cy * cellSize + cx] = data[globalY * width + globalX];
                     }
                     else
                     {
-                        cellBuffer[cy * cellSize + cx] = 0; // Fill with zeros if out of bounds
+                        // Handle the padding by copying values from adjacent cells if out of bounds
+                        if (x > 0 && cx == 0)  // If we're on the leftmost column, copy from the previous cell
+                        {
+                            cellBuffer[cy * cellSize + cx] = cellBuffer[cy * cellSize + 1];  // Copy from the right column
+                        }
+                        else if (y > 0 && cy == 0)  // If we're on the topmost row, copy from the previous cell
+                        {
+                            cellBuffer[cy * cellSize + cx] = cellBuffer[(cy + 1) * cellSize + cx];  // Copy from the bottom row
+                        }
+                        else
+                        {
+                            // Default behavior: use 0 for the padding outside the valid range
+                            cellBuffer[cy * cellSize + cx] = 0;
+                        }
                     }
+                }
+            }
+
+            // Ensure the padding between adjacent cells is consistent
+            if (x > 0)
+            {
+                for (i32 cy = 0; cy < cellSize; ++cy)
+                {
+                    // Copy the padding column from the previous cell
+                    cellBuffer[cy * cellSize] = cellBuffer[cy * cellSize + 1];
+                }
+            }
+
+            if (y > 0)
+            {
+                for (i32 cx = 0; cx < cellSize; ++cx)
+                {
+                    // Copy the padding row from the previous cell
+                    cellBuffer[cx] = cellBuffer[cellSize + cx];
                 }
             }
 
@@ -247,7 +282,9 @@ void Terrain::OpenStream(StringView heightmapPath)
     m_fileStream.open(filepath, std::ios::binary);
 
     m_cells.resize(m_maxCells);
-    ReadCell(1, 2, m_cells[0]);
+    for (u32 i = 0; i < 5; i++)
+        for (u32 j = 0; j < 5; j++)
+            ReadCell(i, j, m_cells[i * 5 + j]);
 }
 
 void Terrain::CloseStream()
@@ -301,6 +338,9 @@ void Terrain::ReadCell(u32 x, u32 y, Terrain::Cell& cell)
     const f32 cellWorldOffsetX = x * (cellSize - 1);
     const f32 cellWorldOffsetZ = y * (cellSize - 1);
 
+    cell.aabb.min = Vec3{ FLT_MAX, FLT_MAX, FLT_MAX };
+    cell.aabb.max = Vec3{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
+
     List<Vertex> vertices;
     vertices.reserve(w * h);
     for (i32 i = 0; i < h; i++)
@@ -308,11 +348,17 @@ void Terrain::ReadCell(u32 x, u32 y, Terrain::Cell& cell)
         for (i32 j = 0; j < w; j++)
         {
             u16 heightValue = d[j + w * i];
-            f32 vx = cellWorldOffsetX + j;
-            f32 vz = cellWorldOffsetZ + i;
-            f32 vy = heightValue * yScaleNorm * yScale - yShift;
+            Vec3 pos
+            {
+                cellWorldOffsetX + j,
+                heightValue* yScaleNorm* yScale - yShift,
+                cellWorldOffsetZ + i
+            };
 
-            vertices.emplace_back(Vertex{ Vec3{vx, vy, vz}, Vec3{}, Vec3{} });
+            cell.aabb.min = Vec3::Min(cell.aabb.min, pos);
+            cell.aabb.max = Vec3::Max(cell.aabb.max, pos);
+
+            vertices.emplace_back(Vertex{ pos, Vec3{}, Vec3{} });
         }
     }
 
@@ -321,14 +367,17 @@ void Terrain::ReadCell(u32 x, u32 y, Terrain::Cell& cell)
     {
         for (i32 j = 1; j < w - 1; j++)
         {
-            Vec3 center = vertices[i * w + j].position;
-            Vec3 left = vertices[i * w + (j - 1)].position;
-            Vec3 right = vertices[i * w + (j + 1)].position;
-            Vec3 down = vertices[(i - 1) * w + j].position;
-            Vec3 up = vertices[(i + 1) * w + j].position;
+            if (i > 0 && i < h - 1 && j > 0 && j < w - 1)
+            {
+                Vec3 center = vertices[i * w + j].position;
+                Vec3 left = vertices[i * w + (j - 1)].position;
+                Vec3 right = vertices[i * w + (j + 1)].position;
+                Vec3 down = vertices[(i + 1) * w + j].position;
+                Vec3 up = vertices[(i - 1) * w + j].position;
 
-            vertices[i * w + j].normal = Vec3::Cross(up - center, right - center).Normalized();
-            vertices[i * w + j].tangent = (right - center).Normalized();
+                vertices[i * w + j].normal = Vec3::Cross(down - up, right - left).Normalized();
+                vertices[i * w + j].tangent = (right - left).Normalized();
+            }
         }
     }
 
@@ -352,7 +401,7 @@ void Terrain::ReadCell(u32 x, u32 y, Terrain::Cell& cell)
 
     // Index buffer
     std::vector<u32> indices;
-    indices.reserve((h - 1) * (2 * w) + 2 * (h - 2));
+    indices.reserve((h - 1) * (2 * w) - 2);
     for (i32 i = 0; i < h - 1; i++)
     {
         for (i32 j = 0; j < w; j++)
@@ -393,6 +442,8 @@ void Terrain::Update(const Vec3& position)
         return;
 }
 
+#include <engine/window.hpp>
+
 void Terrain::Render(const Camera& camera)
 {
     if (!m_fileStream.is_open())
@@ -406,14 +457,19 @@ void Terrain::Render(const Camera& camera)
     Graphics::Get().SetPipeline(m_pipeline);
     Graphics::Get().CommitResources(m_pipeline, m_resources);
 
+    if (true || Window::Get().GetKey(Key::Z))
+        m_prevFrustrum = camera.GetFrustrum();
+
     for (const auto& cell : m_cells)
     {
+        DebugDraw::Get().Box(cell.aabb, 0xFFFFFFFF);
+
         if (cell.vertexBuffer == INVALID_GRAPHICS_HANDLE ||
             cell.indexBuffer == INVALID_GRAPHICS_HANDLE)
             continue;
 
-        //if (!Shape::Overlaps(camera.GetFrustrum(), cell.aabb))
-        //    continue;
+        if (!Shape::Overlaps(m_prevFrustrum, cell.aabb))
+            continue;
 
         const u64 offset = 0;
         GraphicsHandle pBuffers[] = { cell.vertexBuffer };

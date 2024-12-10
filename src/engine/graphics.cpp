@@ -113,6 +113,41 @@ void DebugDraw::Line(const Vec3& a, const Vec3& b, u32 color)
     m_vertices.emplace_back(b, color);
 }
 
+void DebugDraw::Box(const Box3& box, u32 color)
+{
+    // Define the 8 corners of the AABB
+    const Vec3 corners[8] =
+    {
+        Vec3(box.min.x, box.min.y, box.min.z),
+        Vec3(box.min.x, box.min.y, box.max.z),
+        Vec3(box.min.x, box.max.y, box.min.z),
+        Vec3(box.min.x, box.max.y, box.max.z),
+        Vec3(box.max.x, box.min.y, box.min.z),
+        Vec3(box.max.x, box.min.y, box.max.z),
+        Vec3(box.max.x, box.max.y, box.min.z),
+        Vec3(box.max.x, box.max.y, box.max.z)
+    };
+
+    // Draw edges of the AABB by connecting the corners
+    // Bottom face (z = min.z)
+    Line(corners[0], corners[1], color);
+    Line(corners[0], corners[2], color);
+    Line(corners[1], corners[3], color);
+    Line(corners[2], corners[3], color);
+
+    // Top face (z = max.z)
+    Line(corners[4], corners[5], color);
+    Line(corners[4], corners[6], color);
+    Line(corners[5], corners[7], color);
+    Line(corners[6], corners[7], color);
+
+    // Vertical edges connecting top and bottom faces
+    Line(corners[0], corners[4], color);
+    Line(corners[1], corners[5], color);
+    Line(corners[2], corners[6], color);
+    Line(corners[3], corners[7], color);
+}
+
 void DebugDraw::Render(const Mat4& viewProj)
 {
     BufferData bufferData;

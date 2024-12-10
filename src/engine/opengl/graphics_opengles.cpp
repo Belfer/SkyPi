@@ -195,7 +195,7 @@ struct PipelineImpl
     LayoutElement layoutElements[MAX_LAYOUT_ELEMS];
     u32 numElements = 0;
 
-    GLenum faceCull = GL_CW;
+    GLenum faceCull = GL_CCW;
 
     bool depthEnable = true;
     bool blendEnable = true;
