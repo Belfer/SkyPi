@@ -52,24 +52,16 @@ private:
 
     struct Cell
     {
-        static constexpr u32 Length = 129; // A cell is 128+1 x 128+1 pixels
-        static constexpr u32 ByteSize = sizeof(u16) * Length * Length;
-        using Buffer = Array<u16, ByteSize>;
+        static constexpr u32 Length = 128 + 1;
+        using HeightData = Array<u16, (Length + 2) * (Length + 2)>;
+        using VertexArray = Array<Vertex, Length * Length>;
 
-        // Cell index
         u32 x{ 0 };
         u32 y{ 0 };
-
-        // Cell AABB
         Box3 aabb{};
+        VertexArray vertices{};
 
-        // Height data (16bit depth)
-        Buffer buffer{};
-
-        // Graphics handles
         GraphicsHandle vertexBuffer{ INVALID_GRAPHICS_HANDLE };
-        GraphicsHandle indexBuffer{ INVALID_GRAPHICS_HANDLE };
-        u32 indexCount{ 0 };
     };
 
     void ReadCell(u32 x, u32 y, Cell& cell);
@@ -90,6 +82,10 @@ private:
     GraphicsHandle m_resources{ INVALID_GRAPHICS_HANDLE };
 
     GraphicsHandle m_texture{ INVALID_GRAPHICS_HANDLE };
+
+    GraphicsHandle m_vertexBuffer{ INVALID_GRAPHICS_HANDLE };
+    GraphicsHandle m_indexBuffer{ INVALID_GRAPHICS_HANDLE };
+    u32 m_indexCount{ 0 };
 
     u32 m_maxCells{ 100 };
     f32 m_viewDistance{ 1000.f };
