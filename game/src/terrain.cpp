@@ -69,6 +69,54 @@ static String LoadText(StringView filename)
     return content.str();
 }
 
+template <u32 LOD>
+static constexpr u32 GetLODCellLength() { return ((Terrain::Cell::Length - 1) >> LOD) + 1; }
+
+template <u32 LOD, typename IndexArray = Array<u16, (GetLODCellLength<LOD>() - 1) * (GetLODCellLength<LOD>() * 2)>>
+static constexpr IndexArray& GetIndices()
+{
+    static IndexArray indices;
+    constexpr const u32 length = GetLODCellLength<LOD>();
+    constexpr const u32 stride = 1 << LOD;
+
+    u32 iidx = 0;
+    for (u32 i = 0; i < length - 1; i++)
+    {
+        // Even rows
+        if (i % 2 == 0)
+        {
+            for (u32 j = 0; j < length; j++)
+            {
+                indices[iidx++] = (j * stride) + (i * stride * Terrain::Cell::Length);         // Top vertex
+                indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length); // Bottom vertex
+            }
+        }
+        // Odd rows
+        else
+        {
+            for (u32 j = length - 1; j < length; j--)
+            {
+                // Map indices to the original vertex buffer
+                indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length); // Bottom vertex
+                indices[iidx++] = (j * stride) + (i * stride * Terrain::Cell::Length);         // Top vertex
+            }
+        }
+    }
+
+    return indices;
+}
+
+#define GENLOD(LOD)\
+{\
+    const auto& indices = GetIndices<LOD>();\
+    BufferData bufferData;\
+    bufferData.dataSize = sizeof(u16) * indices.size();\
+    bufferData.pData = indices.data();\
+    auto& indexBuffer = m_indexBuffers[LOD];\
+    indexBuffer.buffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);\
+    indexBuffer.count = indices.size();\
+}
+
 void Terrain::Initialize()
 {
     // Create draw buffer
@@ -162,43 +210,19 @@ void Terrain::Initialize()
 
     // Index buffer
     {
-        constexpr SizeType IndexCount = (Cell::Length - 1) * (Cell::Length * 2);
-        static Array<u32, IndexCount> indices;
-
-        u32 iidx = 0;
-        for (i32 i = 0; i < Cell::Length - 1; i++)
-        {
-            // Even rows
-            if (i % 2 == 0)
-            {
-                for (i32 j = 0; j < Cell::Length; j++)
-                {
-                    indices[iidx++] = j + Cell::Length * i;       // Top vertex
-                    indices[iidx++] = j + Cell::Length * (i + 1); // Bottom vertex
-                }
-            }
-            // Odd rows
-            else
-            {
-                for (i32 j = Cell::Length - 1; j >= 0; j--)
-                {
-                    indices[iidx++] = j + Cell::Length * (i + 1); // Bottom vertex
-                    indices[iidx++] = j + Cell::Length * i;       // Top vertex
-                }
-            }
-        }
-
-        BufferData bufferData;
-        bufferData.dataSize = sizeof(Array<u32, IndexCount>);
-        bufferData.pData = indices.data();
-
         BufferInfo bufferInfo;
         bufferInfo.type = BufferType::INDEX_BUFFER;
         bufferInfo.usage = BufferUsage::DYNAMIC;
         bufferInfo.access = BufferAccess::WRITE;
 
-        m_indexBuffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);
-        m_indexCount = IndexCount;
+        GENLOD(0);
+        GENLOD(1);
+        GENLOD(2);
+        GENLOD(3);
+        GENLOD(4);
+        GENLOD(5);
+        GENLOD(6);
+        GENLOD(7);
     }
 }
 
@@ -459,11 +483,13 @@ void Terrain::Render(const Camera& camera)
         GraphicsHandle pBuffers[] = { cell.vertexBuffer };
 
         Graphics::Get().SetVertexBuffers(0, 1, pBuffers, &offset);
-        Graphics::Get().SetIndexBuffer(m_indexBuffer, 0);
+
+        const auto& indexBuffer = m_indexBuffers[m_lod];
+        Graphics::Get().SetIndexBuffer(indexBuffer.buffer, 0);
 
         DrawIndexedAttribs attribs;
-        attribs.indexType = GraphicsValueType::UINT32;
-        attribs.numIndices = m_indexCount;
+        attribs.indexType = GraphicsValueType::UINT16;
+        attribs.numIndices = indexBuffer.count;
         Graphics::Get().DrawIndexed(attribs);
 
         //DrawAttribs attribs;

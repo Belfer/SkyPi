@@ -42,7 +42,7 @@ public:
 
     inline GraphicsHandle GetResources() const { return m_resources; }
 
-private:
+public:
     struct Vertex
     {
         Vec3 position;
@@ -84,9 +84,16 @@ private:
     GraphicsHandle m_texture{ INVALID_GRAPHICS_HANDLE };
 
     GraphicsHandle m_vertexBuffer{ INVALID_GRAPHICS_HANDLE };
-    GraphicsHandle m_indexBuffer{ INVALID_GRAPHICS_HANDLE };
-    u32 m_indexCount{ 0 };
 
+    struct IndexBuffer
+    {
+        GraphicsHandle buffer{ INVALID_GRAPHICS_HANDLE };
+        u32 count{ 0 };
+    };
+    IndexBuffer m_indexBuffers[8]{};
+
+    i32 m_lod{ 0 };
+    
     u32 m_maxCells{ 100 };
     f32 m_viewDistance{ 1000.f };
     List<Cell> m_cells;

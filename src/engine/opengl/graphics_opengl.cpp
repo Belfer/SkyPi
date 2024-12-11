@@ -949,6 +949,8 @@ void GraphicsOpenGL::SetPipeline(const GraphicsHandle pipeline)
 
     glDisable(GL_DITHER);
 
+    //glPolygonMode(GL_FRONT, GL_LINE);
+
     glUseProgram(pipeline_impl.program);
     glBindVertexArray(pipeline_impl.vao);
 
@@ -1081,4 +1083,5 @@ void GraphicsOpenGL::DrawIndexed(const DrawIndexedAttribs& attribs)
 {
     auto& pipeline_impl = GetImpl(m_ctx.currentPipeline, s_pipelines);
     glDrawElements(GetTopologyMode(pipeline_impl.topology), attribs.numIndices, GetValueType(attribs.indexType), 0);
+    //glDrawElements(GL_LINE_STRIP, attribs.numIndices, GetValueType(attribs.indexType), 0);
 }
