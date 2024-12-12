@@ -58,7 +58,7 @@ void main()
 
     float diffuse = Li * max(0.0, dot(N, Ld));
 
-    vec2 uv = io.position.xz * 0.05;
+    vec2 uv = io.position.xz * 0.25;
     vec4 albedo = texture(Albedo, uv);
 
     vec3 color = io.color.rgb * albedo.rgb * diffuse;

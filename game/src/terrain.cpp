@@ -70,12 +70,26 @@ static String LoadText(StringView filename)
 }
 
 template <u32 LOD>
-static constexpr u32 GetLODCellLength() { return ((Terrain::Cell::Length - 1) >> LOD) + 1; }
-
-template <u32 LOD, typename IndexArray = Array<u16, (GetLODCellLength<LOD>() - 1) * (GetLODCellLength<LOD>() * 2)>>
-static constexpr IndexArray& GetIndices()
+static constexpr u32 GetLODCellLength()
 {
-    static IndexArray indices;
+    u32 length = ((Terrain::Cell::Length - 1) >> LOD) + 1;
+    return length < 2 ? 2 : length;
+}
+
+template <u32 LOD>
+static constexpr u32 GetLODCellSize()
+{
+    u32 length = GetLODCellLength<LOD>();
+    return ((length - 1) * ((length + 1) * 2));
+}
+
+template <u32 LOD>
+using IndexArray = Array<u16, GetLODCellSize<LOD>()>;
+
+template <u32 LOD>
+static constexpr IndexArray<LOD>& GetIndices()
+{
+    static IndexArray<LOD> indices;
     constexpr const u32 length = GetLODCellLength<LOD>();
     constexpr const u32 stride = 1 << LOD;
 
@@ -90,16 +104,23 @@ static constexpr IndexArray& GetIndices()
                 indices[iidx++] = (j * stride) + (i * stride * Terrain::Cell::Length);         // Top vertex
                 indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length); // Bottom vertex
             }
+
+            u32 j = length - 1;
+            indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length);
+            indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length);
         }
         // Odd rows
         else
         {
             for (u32 j = length - 1; j < length; j--)
             {
-                // Map indices to the original vertex buffer
                 indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length); // Bottom vertex
                 indices[iidx++] = (j * stride) + (i * stride * Terrain::Cell::Length);         // Top vertex
             }
+
+            u32 j = 0;
+            indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length);
+            indices[iidx++] = (j * stride) + ((i + 1) * stride * Terrain::Cell::Length);
         }
     }
 
@@ -313,12 +334,8 @@ void Terrain::OpenStream(StringView heightmapPath)
         for (u32 j = 0; j < cellsY; j++)
             ReadCell(i, j, m_cells[i * cellsX + j]);
 
-    //m_cells.resize(m_maxCells);
-    //for (u32 i = 0; i < 5; i++)
-    //    for (u32 j = 0; j < 5; j++)
-    //        ReadCell(i, j, m_cells[i * 5 + j]);
-    
-    //ReadCell(2, 3, m_cells[0]);
+    //m_cells.resize(1);
+    //ReadCell(0, 0, m_cells[0]);
 }
 
 void Terrain::CloseStream()
@@ -364,7 +381,7 @@ void Terrain::ReadCell(u32 cx, u32 cy, Terrain::Cell& cell)
     const u16* d = cellHeightData.data();
 
     // Vertex buffer
-    const f32 yScale = 500.f / 0xFFFF;
+    const f32 yScale = 1000.f / 0xFFFF;
     const f32 worldX = cx * (Cell::Length - 1);
     const f32 worldY = cy * (Cell::Length - 1);
 
@@ -390,6 +407,8 @@ void Terrain::ReadCell(u32 cx, u32 cy, Terrain::Cell& cell)
             cell.vertices[vidx++].position = pos;
         }
     }
+
+    cell.center = (cell.aabb.max + cell.aabb.min) * 0.5f;
 
     // Calculate normals and tangents
     for (i32 i = 1; i < h - 1; i++)
@@ -453,6 +472,9 @@ void Terrain::Render(const Camera& camera)
         m_frustum = camera.GetFrustum();
     if (m_debugDraw) {} // TODO: Draw frustum
 
+    if (m_updateCamera)
+        m_cameraPos = Vec3(camera.GetInvView()[3].x, camera.GetInvView()[3].y, camera.GetInvView()[3].z);
+
     for (const auto& cell : m_cells)
     {
         if (m_debugDraw)
@@ -484,12 +506,28 @@ void Terrain::Render(const Camera& camera)
 
         Graphics::Get().SetVertexBuffers(0, 1, pBuffers, &offset);
 
-        const auto& indexBuffer = m_indexBuffers[m_lod];
-        Graphics::Get().SetIndexBuffer(indexBuffer.buffer, 0);
-
         DrawIndexedAttribs attribs;
         attribs.indexType = GraphicsValueType::UINT16;
-        attribs.numIndices = indexBuffer.count;
+
+        if (m_lod != -1)
+        {
+            const auto& indexBuffer = m_indexBuffers[m_lod];
+            Graphics::Get().SetIndexBuffer(indexBuffer.buffer, 0);
+            attribs.numIndices = indexBuffer.count;
+        }
+        else
+        {
+            f32 delta = (m_cameraPos - cell.center).Magnitude();
+            i32 lod = Math::Clamp((i32)ceil(pow(delta, 1.3f) / 5000.f) - 1, 0, 7);
+
+            const auto& indexBuffer = m_indexBuffers[lod];
+            Graphics::Get().SetIndexBuffer(indexBuffer.buffer, 0);
+            attribs.numIndices = indexBuffer.count;
+
+            if (m_debugDraw)
+                DebugDraw::Get().Line(m_cameraPos, cell.center, 0xFFFFFFFF);
+        }
+
         Graphics::Get().DrawIndexed(attribs);
 
         //DrawAttribs attribs;

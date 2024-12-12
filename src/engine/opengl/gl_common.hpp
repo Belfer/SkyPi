@@ -5,7 +5,8 @@
 
 struct GraphicsContext
 {
-    GraphicsHandle currentPipeline = INVALID_GRAPHICS_HANDLE;
+    bool m_wireframe{ false };
+    GraphicsHandle currentPipeline{ INVALID_GRAPHICS_HANDLE };
 };
 
 static GLenum GetTextureFormat(TextureFormat format)

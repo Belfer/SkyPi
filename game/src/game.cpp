@@ -60,8 +60,12 @@ void SkyPiGame::Update()
     if (Window::Get().GetKey(Key::Q))
         moveDelta.y -= 1;
 
+    f32 moveSpeed = m_moveSpeed;
+    if (Window::Get().GetKey(Key::SPACE))
+        moveSpeed *= 20;
+
     Quat camRot = Quat::Euler(m_cameraRot.x, m_cameraRot.y, m_cameraRot.z);
-    m_cameraPos += camRot * moveDelta * m_moveSpeed * Time::Get().DeltaTime();
+    m_cameraPos += camRot * moveDelta * moveSpeed * Time::Get().DeltaTime();
 
     // Update view data
     int w, h;
@@ -87,9 +91,9 @@ static void DrawXZGrid(const Vec3& cameraPos, f32 zfar)
     // Colors
     static const u32 lightGray = 0xFF555555;
     static const u32 darkGray = 0xFF444444;
-    static const u32 red = 0xFFFF0000;
+    static const u32 red = 0xFF0000FF;
     static const u32 green = 0xFF00FF00;
-    static const u32 blue = 0xFF0000FF;
+    static const u32 blue = 0xFFFF0000;
 
     // Round the camera's position to the nearest grid spacing
     f32 roundedX = currentSpacing * floor(cameraPos.x / currentSpacing);
@@ -130,6 +134,7 @@ void SkyPiGame::Render()
     Graphics::Get().ClearRenderTarget(Graphics::Get().GetCurrentBackBufferRT(), clearColor);
 
     DrawXZGrid(m_cameraPos, 5000.f);
+    DebugDraw::Get().Line(Vec3(0, 0, 0), Vec3(1, 0, 1), 0xFFFFFFFF); // Z-axis
 
     BufferData bufferData;
     bufferData.dataSize = sizeof(ConstantData);

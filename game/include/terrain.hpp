@@ -59,6 +59,7 @@ public:
         u32 x{ 0 };
         u32 y{ 0 };
         Box3 aabb{};
+        Vec3 center{};
         VertexArray vertices{};
 
         GraphicsHandle vertexBuffer{ INVALID_GRAPHICS_HANDLE };
@@ -92,7 +93,7 @@ private:
     };
     IndexBuffer m_indexBuffers[8]{};
 
-    i32 m_lod{ 0 };
+    i32 m_lod{ -1 };
     
     u32 m_maxCells{ 100 };
     f32 m_viewDistance{ 1000.f };
@@ -100,5 +101,7 @@ private:
 
     bool m_debugDraw{ false };
     bool m_updateFrustum{ true };
+    bool m_updateCamera{ true };
     Frustrum m_frustum{};
+    Vec3 m_cameraPos{};
 };

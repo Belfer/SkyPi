@@ -104,6 +104,8 @@ public:
     void Draw(const DrawAttribs& attribs) override;
     void DrawIndexed(const DrawIndexedAttribs& attribs) override;
 
+    void SetWireframe(bool enabled) override;
+
 #ifdef EDITOR_BUILD
     bool InitializeImGui() override
     {
@@ -949,7 +951,17 @@ void GraphicsOpenGL::SetPipeline(const GraphicsHandle pipeline)
 
     glDisable(GL_DITHER);
 
-    //glPolygonMode(GL_FRONT, GL_LINE);
+    if (m_ctx.m_wireframe)
+    {
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-1, -1);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
+    else
+    {
+        glDisable(GL_POLYGON_OFFSET_LINE);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
 
     glUseProgram(pipeline_impl.program);
     glBindVertexArray(pipeline_impl.vao);
@@ -1082,6 +1094,11 @@ void GraphicsOpenGL::Draw(const DrawAttribs& attribs)
 void GraphicsOpenGL::DrawIndexed(const DrawIndexedAttribs& attribs)
 {
     auto& pipeline_impl = GetImpl(m_ctx.currentPipeline, s_pipelines);
-    glDrawElements(GetTopologyMode(pipeline_impl.topology), attribs.numIndices, GetValueType(attribs.indexType), 0);
+    glDrawElements(GetTopologyMode(pipeline_impl.topology), attribs.numIndices, GetValueType(attribs.indexType), (void*)attribs.offset);
     //glDrawElements(GL_LINE_STRIP, attribs.numIndices, GetValueType(attribs.indexType), 0);
+}
+
+void GraphicsOpenGL::SetWireframe(bool enabled)
+{
+    m_ctx.m_wireframe = enabled;
 }

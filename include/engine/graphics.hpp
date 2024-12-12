@@ -145,6 +145,7 @@ struct DrawIndexedAttribs
 
 	GraphicsValueType indexType = GraphicsValueType::UINT32;
 	u32 numIndices = 0;
+	u32 offset = 0;
 };
 
 class Graphics
@@ -203,6 +204,8 @@ public:
 
 	virtual void Draw(const DrawAttribs& attribs) = 0;
 	virtual void DrawIndexed(const DrawIndexedAttribs& attribs) = 0;
+
+	virtual void SetWireframe(bool enabled) = 0;
 
 #ifdef EDITOR_BUILD
 	// ImGui calls (tmp solution until imgui is fully done via interface)

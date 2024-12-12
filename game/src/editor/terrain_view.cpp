@@ -6,8 +6,8 @@ Inspector<Terrain>::Inspector(Terrain& terrain)
 {
     SetTitle("Terrain");
     SetExclusive(true);
-    m_heightmapSrcPath = "/assets/tamriel_5x5.png";
-    m_heightmapDstPath = "/assets/tamriel_5x5.bin";
+    m_heightmapSrcPath = "/assets/tamriel_lowres.png";
+    m_heightmapDstPath = "/assets/tamriel_lowres.bin";
 }
 
 void Inspector<Terrain>::OnGui()
@@ -54,6 +54,13 @@ void Inspector<Terrain>::OnGui()
         {
             m_terrain.CloseStream();
         }
+
+        ImGui::SeparatorText("Graphics");
+
+        ImGui::Text("Wireframe: ");
+        ImGui::SameLine();
+        if (ImGui::Checkbox("##Wireframe", &m_wireframe))
+            Graphics::Get().SetWireframe(m_wireframe);
     }
 }
 
@@ -84,7 +91,11 @@ void Inspector<Terrain>::Inspect(Terrain& terrain)
     ImGui::SameLine();
     ImGui::Checkbox("##UpdateFrustum", &terrain.m_updateFrustum);
 
+    ImGui::Text("Update Camera: ");
+    ImGui::SameLine();
+    ImGui::Checkbox("##UpdateCamera", &terrain.m_updateCamera);
+
     ImGui::Text("LOD: ");
     ImGui::SameLine();
-    ImGui::SliderInt("##LOD", &terrain.m_lod, 0, 7);
+    ImGui::SliderInt("##LOD", &terrain.m_lod, -1, 7);
 }

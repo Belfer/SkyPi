@@ -12,13 +12,25 @@ public:
 	inline const Mat4& GetProjection() const { return m_projection; }
 
     inline const Mat4& GetViewProjection() const { return m_viewProjection; }
+
+    inline const Mat4& GetInvView() const { return m_invView; }
+    inline const Mat4& GetInvProjection() const { return m_invProjection; }
+    inline const Mat4& GetInvViewProjection() const { return m_invViewProjection; }
+
     inline const Frustrum& GetFrustum() const { return m_frustum; }
 
     inline void Update()
     {
         // Combine the projection and view matrices
-        Mat4 vp = m_projection * m_view;
-        m_viewProjection = vp;
+        m_viewProjection = m_projection * m_view;
+
+        // Compute inverses
+        m_invView = m_view.Inverse();
+        m_invProjection = m_view.Inverse();
+        m_invViewProjection = m_view.Inverse();
+
+        // Recalculate frustum
+        const Mat4& vp = m_viewProjection;
 
         // Left plane
         m_frustum.planes[0].normal.x = vp[0][3] + vp[0][0];
@@ -62,7 +74,13 @@ public:
 
 private:
     Mat4 m_view{ Mat4::Identity() };
+    Mat4 m_invView{ Mat4::Identity() };
+
 	Mat4 m_projection{ Mat4::Identity() };
+    Mat4 m_invProjection{ Mat4::Identity() };
+    
     Mat4 m_viewProjection{ Mat4::Identity() };
+    Mat4 m_invViewProjection{ Mat4::Identity() };
+
     Frustrum m_frustum{};
 };

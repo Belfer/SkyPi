@@ -14,6 +14,7 @@ public:
 	static void Inspect(Terrain& terrain);
 
 private:
+	bool m_wireframe{ false };
 	Terrain& m_terrain;
 
 	CString<512> m_heightmapSrcPath{};
