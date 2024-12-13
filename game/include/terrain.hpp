@@ -31,7 +31,7 @@ public:
     void OpenStream(StringView heightmapPath);
     void CloseStream();
 
-    void Update(const Vec3& position);
+    void Update(const Camera& camera);
     void Render(const Camera& camera);
 
     inline void SetMaxCells(u32 maxCells) { m_maxCells = maxCells; }
@@ -50,19 +50,27 @@ public:
         Vec3 tangent;
     };
 
+    struct MetaCell
+    {
+        u32 x{ 0 };
+        u32 y{ 0 };
+        u32 h{ 0 };
+        bool isLoaded{ false };
+    };
+
     struct Cell
     {
         static constexpr u32 Length = 128 + 1;
         using HeightData = Array<u16, (Length + 2) * (Length + 2)>;
         using VertexArray = Array<Vertex, Length * Length>;
 
-        u32 x{ 0 };
-        u32 y{ 0 };
+        u32 idx{ 0 };
         Box3 aabb{};
         Vec3 center{};
         VertexArray vertices{};
-
         GraphicsHandle vertexBuffer{ INVALID_GRAPHICS_HANDLE };
+
+        i32 lod{ 0 };
     };
 
     void ReadCell(u32 x, u32 y, Cell& cell);
@@ -95,9 +103,13 @@ private:
 
     i32 m_lod{ -1 };
     
-    u32 m_maxCells{ 100 };
+    i32 m_cellsX{ 0 };
+    i32 m_cellsY{ 0 };
+    u32 m_maxCells{ 33 };
     f32 m_viewDistance{ 1000.f };
-    List<Cell> m_cells;
+
+    List<MetaCell> m_metaCells{};
+    List<Cell> m_cells{};
 
     bool m_debugDraw{ false };
     bool m_updateFrustum{ true };

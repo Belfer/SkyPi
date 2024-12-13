@@ -44,7 +44,7 @@ int Application::Run(int argc, char** args, Game& game)
 
         Graphics::Get().NewFrame();
         game.Render();
-#ifdef DEBUG_BUILD
+#if defined(EDITOR_BUILD) || defined(DEBUG_BUILD)
         DebugDraw::Get().Clear();
 #endif
 #ifdef EDITOR_BUILD
@@ -78,7 +78,7 @@ bool Application::Initialize() noexcept
         return false;
     }
 
-#ifdef DEBUG_BUILD
+#if defined(EDITOR_BUILD) || defined(DEBUG_BUILD)
     if (!DebugDraw::Get().Initialize())
     {
         LOGE(Core, "Failed to initialize debug draw!");
@@ -106,7 +106,7 @@ void Application::Shutdown() noexcept
     EditorManager::Get().Shutdown();
 #endif
 
-#ifdef DEBUG_BUILD
+#if defined(EDITOR_BUILD) || defined(DEBUG_BUILD)
     DebugDraw::Get().Shutdown();
 #endif
 

@@ -216,6 +216,7 @@ public:
 #endif
 };
 
+#if defined(EDITOR_BUILD) || defined(DEBUG_BUILD)
 class DebugDraw
 {
 public:
@@ -251,3 +252,4 @@ private:
 
 	List<Vertex> m_vertices{};
 };
+#endif

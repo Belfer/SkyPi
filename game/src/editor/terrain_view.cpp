@@ -6,8 +6,8 @@ Inspector<Terrain>::Inspector(Terrain& terrain)
 {
     SetTitle("Terrain");
     SetExclusive(true);
-    m_heightmapSrcPath = "/assets/tamriel_lowres.png";
-    m_heightmapDstPath = "/assets/tamriel_lowres.bin";
+    m_heightmapSrcPath = "/assets/tamriel.png";
+    m_heightmapDstPath = "/assets/tamriel.bin";
 }
 
 void Inspector<Terrain>::OnGui()

@@ -296,8 +296,12 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
     {
         for (i32 cx = 0; cx < cellsX; ++cx)
         {
-            i32 globalX = cx * (cellSize - 1);
-            i32 globalY = cy * (cellSize - 1);
+            const i32 globalX = cx * (cellSize - 1);
+            const i32 globalY = cy * (cellSize - 1);
+
+            u32 avgHeight = 0;
+            u32 sampleCount = 0;
+
             u32 idx = 0;
             for (i32 i = globalY - 1; i < (globalY + cellSize + 1); ++i)
             {
@@ -305,12 +309,19 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
                 {
                     i32 y = i < 0 ? 0 : i >= height ? height - 1 : i;
                     i32 x = j < 0 ? 0 : j >= width ? width - 1 : j;
-                    cellHeightData[idx++] = data[y * width + x];
+                    u16 h = data[y * width + x];
+
+                    avgHeight += h;
+                    cellHeightData[idx++] = h;
                 }
             }
 
+            ENSURE(sampleCount > 0);
+            avgHeight /= sampleCount;
+
             outFile.write((char*)&cx, sizeof(i32));
             outFile.write((char*)&cy, sizeof(i32));
+            outFile.write((char*)&avgHeight, sizeof(u32));
             outFile.write((char*)cellHeightData.data(), sizeof(Cell::HeightData));
         }
     }
@@ -319,23 +330,43 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
     UnloadImage(heightmap);
 }
 
+static u32 SeekCellData(InputFileStream& stream, u32 stride, i32 cellsX, i32 cx, i32 cy)
+{
+    const u32 headerSize = sizeof(i32) * 2;
+    const u32 cellDataSize = sizeof(i32) * 2 + stride;
+    const u32 cellIndex = cy * cellsX + cx;
+    const u32 offset = headerSize + (cellIndex * cellDataSize);
+    stream.seekg(offset);
+}
+
 void Terrain::OpenStream(StringView heightmapPath)
 {
     CString<512> filepath = File::GetPath(heightmapPath);
     m_fileStream.open(filepath, std::ios::binary);
 
-    i32 cellsX = 0, cellsY = 0;
     m_fileStream.seekg(0);
-    m_fileStream.read((char*)&cellsX, sizeof(i32));
-    m_fileStream.read((char*)&cellsY, sizeof(i32));
+    m_fileStream.read((char*)&m_cellsX, sizeof(i32));
+    m_fileStream.read((char*)&m_cellsY, sizeof(i32));
+    
+    // Load meta data
+    m_metaCells.resize(m_cellsX * m_cellsY);
+    for (i32 cy = 0; cy < m_cellsY; ++cy)
+    {
+        for (i32 cx = 0; cx < m_cellsX; ++cx)
+        {
+            // Read cell data
+            SeekCellData(m_fileStream, sizeof(Cell::HeightData), m_cellsX, cx, cy);
 
-    m_cells.resize(cellsX * cellsY);
-    for (u32 i = 0; i < cellsY; i++)
-        for (u32 j = 0; j < cellsY; j++)
-            ReadCell(i, j, m_cells[i * cellsX + j]);
+            auto& metaCell = m_metaCells[cy * m_cellsX + cx];
+            m_fileStream.read((char*)&metaCell.x, sizeof(i32));
+            m_fileStream.read((char*)&metaCell.y, sizeof(i32));
+            m_fileStream.read((char*)&metaCell.h, sizeof(u32));
+            metaCell.isLoaded = false;
+        }
+    }
 
-    //m_cells.resize(1);
-    //ReadCell(0, 0, m_cells[0]);
+    // Reserve cell data
+    m_cells.resize(m_maxCells * m_maxCells);
 }
 
 void Terrain::CloseStream()
@@ -347,26 +378,16 @@ void Terrain::CloseStream()
 void Terrain::ReadCell(u32 cx, u32 cy, Terrain::Cell& cell)
 {
     ENSURE(m_fileStream.is_open());
-
-    // Read header
-    i32 cellsX = 0, cellsY = 0;
-    m_fileStream.seekg(0);
-    m_fileStream.read((char*)&cellsX, sizeof(i32));
-    m_fileStream.read((char*)&cellsY, sizeof(i32));
-
-    ENSURE(cx < cellsX && cy < cellsY);
-
-    const u32 headerSize = sizeof(i32) * 2;
-    const u32 cellDataSize = sizeof(i32) * 2 + sizeof(Cell::HeightData);
-    const u32 cellIndex = cy * cellsX + cx;
-    const u32 offset = headerSize + (cellIndex * cellDataSize);
+    ENSURE(cx < m_cellsX && cy < m_cellsY);
 
     // Read cell data
-    m_fileStream.seekg(offset);
+    SeekCellData(m_fileStream, sizeof(Cell::HeightData), m_cellsX, cx, cy);
 
-    u32 cellX = 0, cellY = 0;
-    m_fileStream.read((char*)&cellX, sizeof(u32));
-    m_fileStream.read((char*)&cellY, sizeof(u32));
+    i32 cellX = 0, cellY = 0;
+    u32 avgHeight = 0;
+    m_fileStream.read((char*)&cellX, sizeof(i32));
+    m_fileStream.read((char*)&cellY, sizeof(i32));
+    m_fileStream.read((char*)&avgHeight, sizeof(u32));
 
     ENSURE(cellX == cx && cellY == cy); // Validate cell coordinates
 
@@ -449,10 +470,29 @@ void Terrain::ReadCell(u32 cx, u32 cy, Terrain::Cell& cell)
     }
 }
 
-void Terrain::Update(const Vec3& position)
+void Terrain::Update(const Camera& camera)
 {
     if (!m_fileStream.is_open())
         return;
+
+    if (m_updateCamera)
+        m_cameraPos = Vec3(camera.GetInvView()[3].x, camera.GetInvView()[3].y, camera.GetInvView()[3].z);
+
+    i32 camCellX = static_cast<i32>(floor(m_cameraPos.x / Cell::Length));
+    i32 camCellY = static_cast<i32>(floor(m_cameraPos.z / Cell::Length));
+    u32 idx = (u32)(camCellY * m_cellsX + camCellX);
+
+    auto& meta = m_metaCells[idx];
+    if ()
+
+    //for (auto& cell : m_cells)
+    //{
+    //    f32 delta = (m_cameraPos - cell.center).Magnitude();
+    //    // TODO: Check if a non loaded cell is closer to camera and if so replace current cell with non loaded cell with:
+    //    // ReadCell(cellx, celly, cell);
+    //
+    //    cell.lod = Math::Clamp((i32)ceil(pow(delta, 1.3f) / 5000.f) - 1, 0, 7);
+    //}
 }
 
 void Terrain::Render(const Camera& camera)
@@ -471,9 +511,6 @@ void Terrain::Render(const Camera& camera)
     if (m_updateFrustum)
         m_frustum = camera.GetFrustum();
     if (m_debugDraw) {} // TODO: Draw frustum
-
-    if (m_updateCamera)
-        m_cameraPos = Vec3(camera.GetInvView()[3].x, camera.GetInvView()[3].y, camera.GetInvView()[3].z);
 
     for (const auto& cell : m_cells)
     {
@@ -506,28 +543,13 @@ void Terrain::Render(const Camera& camera)
 
         Graphics::Get().SetVertexBuffers(0, 1, pBuffers, &offset);
 
+        const i32 lod = m_lod != -1 ? m_lod : cell.lod;
+        const auto& indexBuffer = m_indexBuffers[lod];
+        Graphics::Get().SetIndexBuffer(indexBuffer.buffer, 0);
+
         DrawIndexedAttribs attribs;
         attribs.indexType = GraphicsValueType::UINT16;
-
-        if (m_lod != -1)
-        {
-            const auto& indexBuffer = m_indexBuffers[m_lod];
-            Graphics::Get().SetIndexBuffer(indexBuffer.buffer, 0);
-            attribs.numIndices = indexBuffer.count;
-        }
-        else
-        {
-            f32 delta = (m_cameraPos - cell.center).Magnitude();
-            i32 lod = Math::Clamp((i32)ceil(pow(delta, 1.3f) / 5000.f) - 1, 0, 7);
-
-            const auto& indexBuffer = m_indexBuffers[lod];
-            Graphics::Get().SetIndexBuffer(indexBuffer.buffer, 0);
-            attribs.numIndices = indexBuffer.count;
-
-            if (m_debugDraw)
-                DebugDraw::Get().Line(m_cameraPos, cell.center, 0xFFFFFFFF);
-        }
-
+        attribs.numIndices = indexBuffer.count;
         Graphics::Get().DrawIndexed(attribs);
 
         //DrawAttribs attribs;

@@ -1,5 +1,6 @@
 #include <engine/graphics.hpp>
 
+#if defined(EDITOR_BUILD) || defined(DEBUG_BUILD)
 static const char* g_debugShaderSrc = R"(
 #ifdef GL_ES
 precision mediump float;
@@ -171,3 +172,4 @@ void DebugDraw::Clear()
 {
     m_vertices.clear();
 }
+#endif

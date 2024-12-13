@@ -75,6 +75,8 @@ void SkyPiGame::Update()
     m_camera.Update();
 
     m_constantData.viewProjMtx = m_camera.GetViewProjection();
+
+    m_terrain.Update(m_camera);
 }
 
 static void DrawXZGrid(const Vec3& cameraPos, f32 zfar)
@@ -143,7 +145,7 @@ void SkyPiGame::Render()
     
     m_terrain.Render(m_camera);
 
-#ifdef DEBUG_BUILD
+#if defined(EDITOR_BUILD) || defined(DEBUG_BUILD)
     DebugDraw::Get().Render(m_camera.GetViewProjection());
 #endif
 }
