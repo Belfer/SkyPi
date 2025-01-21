@@ -1,0 +1,3 @@
+[submodule "extern/bx"]
+	path = extern/bx
+	url = https://github.com/BitCache-Labs/bx.git
