@@ -9,7 +9,7 @@ set (GAME_SRCS
 	"src/terrain.cpp"
 )
 
-if (BUILD_EDITOR)
+if (BX_BUILD_EDITOR)
 	set (GAME_SRCS ${GAME_SRCS}
 		"src/editor/game_editor.cpp"
 		"src/editor/terrain_view.cpp"
@@ -33,15 +33,15 @@ target_include_directories (Game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries (SkyPi Game)
 
 # TODO: We need to make this get copied to the exe bin from the engine lib (HOW?? Idk)
-#if (WIN32)
-#	# We need to copy steam dll to the exe bin on windows
-#	if (ONLINE_BACKEND STREQUAL "Steam" AND STEAMWORKS_FOUND)
-#		# Iterate through all executables and copy the DLL to each one
-#		add_custom_command(
-#			TARGET SkyPi POST_BUILD
-#			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#				${STEAMWORKS_DLL_PATH} $<TARGET_FILE_DIR:Game>
-#			COMMENT "Copying Steamworks DLL to the executable output directory"
-#		)
-#	endif()
-#endif()
+if (WIN32)
+	# We need to copy steam dll to the exe bin on windows
+	if (BX_ONLINE_BACKEND STREQUAL "Steam" AND STEAMWORKS_FOUND)
+		# Iterate through all executables and copy the DLL to each one
+		add_custom_command(
+			TARGET Game POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				${STEAMWORKS_DLL_PATH} $<TARGET_FILE_DIR:Game>
+			COMMENT "Copying Steamworks DLL to the executable output directory"
+		)
+	endif()
+endif()
