@@ -16,7 +16,8 @@ if (BX_BUILD_EDITOR)
 	)
 endif()
 
-set (GAME_LIBS Engine)
+# We need the -WHOLEARCHIVE to avoid static compile optimize away
+set (GAME_LIBS Engine -WHOLEARCHIVE:$<TARGET_FILE:Engine>)
 
 add_library (Game STATIC ${GAME_SRCS})
 target_link_libraries (Game ${GAME_LIBS})
@@ -30,7 +31,7 @@ target_include_directories (Game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 	add_executable (SkyPi "src/runtime")
 #endif()
 
-target_link_libraries (SkyPi Game)
+target_link_libraries (SkyPi Game -WHOLEARCHIVE:$<TARGET_FILE:Game>)
 
 # TODO: We need to make this get copied to the exe bin from the engine lib (HOW?? Idk)
 if (WIN32)

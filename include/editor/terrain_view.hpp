@@ -2,16 +2,15 @@
 
 #include <terrain.hpp>
 #include <editor/editor.hpp>
-#include <editor/inspector.hpp>
 
 template <>
-class Inspector<Terrain> final : public Editor
+class Editor<Terrain> final : public EditorView
 {
 public:
-	Inspector(Terrain& terrain);
+	Editor(Terrain& terrain);
 	void OnGui() override;
 
-	static void Inspect(Terrain& terrain);
+	static void OnInspectGui(Terrain& terrain);
 
 private:
 	bool m_wireframe{ false };

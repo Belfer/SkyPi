@@ -2,7 +2,7 @@
 #include <editor/terrain_view.hpp>
 #include <engine/time.hpp>
 
-class SkyPiEditorView final : public Editor
+class SkyPiEditorView final : public EditorView
 {
 public:
     SkyPiEditorView();
@@ -57,18 +57,10 @@ void SkyPiEditor::Configure()
                 if (ImGui::MenuItem("Redo")) {}
                 ImGui::EndMenu();
             }
-
-            if (ImGui::BeginMenu("View"))
-            {
-                if (ImGui::MenuItem("Terrain"))
-                    EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
-
-                ImGui::EndMenu();
-            }
         });
 
-    EditorManager::Get().AddEditor(meta::make_unique<SkyPiEditorView>());
-    EditorManager::Get().AddEditor(meta::make_unique<Inspector<Terrain>>(m_game.m_terrain));
+    EditorManager::Get().AddView(meta::make_unique<SkyPiEditorView>());
+    EditorManager::Get().AddView(meta::make_unique<Editor<Terrain>>(m_game.m_terrain));
 }
 
 bool SkyPiEditor::Initialize()
