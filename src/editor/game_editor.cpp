@@ -2,7 +2,7 @@
 #include <editor/terrain_view.hpp>
 #include <engine/time.hpp>
 
-class SkyPiEditorView final : public EditorView
+class SkyPiEditorView final : public EditorWindow
 {
 public:
     SkyPiEditorView();
@@ -39,28 +39,6 @@ void SkyPiEditorView::OnGui()
 
 void SkyPiEditor::Configure()
 {
-    EditorManager::Get().AddMenuBar(
-        [this]()
-        {
-            if (ImGui::BeginMenu("File"))
-            {
-                if (ImGui::MenuItem("New")) {}
-                if (ImGui::MenuItem("Open")) {}
-                ImGui::Separator();
-                if (ImGui::MenuItem("Exit")) {}
-                ImGui::EndMenu();
-            }
-
-            if (ImGui::BeginMenu("Edit"))
-            {
-                if (ImGui::MenuItem("Undo")) {}
-                if (ImGui::MenuItem("Redo")) {}
-                ImGui::EndMenu();
-            }
-        });
-
-    EditorManager::Get().AddView(meta::make_unique<SkyPiEditorView>());
-    EditorManager::Get().AddView(meta::make_unique<Editor<Terrain>>(m_game.m_terrain));
 }
 
 bool SkyPiEditor::Initialize()
@@ -81,4 +59,23 @@ void SkyPiEditor::Render()
 void SkyPiEditor::Shutdown()
 {
     m_game.Shutdown();
+}
+
+void SkyPiEditor::OnMainMenuBar()
+{
+    if (ImGui::BeginMenu("File"))
+    {
+        if (ImGui::MenuItem("New")) {}
+        if (ImGui::MenuItem("Open")) {}
+        ImGui::Separator();
+        if (ImGui::MenuItem("Exit")) {}
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Edit"))
+    {
+        if (ImGui::MenuItem("Undo")) {}
+        if (ImGui::MenuItem("Redo")) {}
+        ImGui::EndMenu();
+    }
 }

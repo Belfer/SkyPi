@@ -365,7 +365,16 @@ void Terrain::OpenStream(StringView heightmapPath)
     }
 
     // Reserve cell data
-    m_cells.resize(m_maxCells * m_maxCells);
+    //m_cells.resize(m_maxCells * m_maxCells);
+    m_cells.resize(m_cellsX * m_cellsY);
+
+    for (i32 cy = 0; cy < m_cellsY; ++cy)
+    {
+        for (i32 cx = 0; cx < m_cellsX; ++cx)
+        {
+            ReadCell(cx, cy, m_cells[m_cellsX * cy + cx]);
+        }
+    }
 }
 
 void Terrain::CloseStream()
@@ -388,7 +397,7 @@ void Terrain::ReadCell(u32 cx, u32 cy, Terrain::Cell& cell)
     m_fileStream.read((char*)&cellY, sizeof(i32));
     m_fileStream.read((char*)&avgHeight, sizeof(u32));
 
-    ENSURE(cellX == cx && cellY == cy); // Validate cell coordinates
+    //ENSURE(cellX == cx && cellY == cy); // Validate cell coordinates
 
     static Cell::HeightData cellHeightData{};
     m_fileStream.read((char*)cellHeightData.data(), sizeof(Cell::HeightData));

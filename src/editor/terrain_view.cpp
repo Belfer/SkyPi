@@ -1,9 +1,9 @@
 #include <editor/terrain_view.hpp>
 #include <engine/time.hpp>
 
-EDITOR_MENU("Views/Terrain", []() { LOGI(Terrain, "HelloWorld!"); })
+//EDITOR_MENUITEM("Views/Terrain", []() { LOGI(Terrain, "HelloWorld!"); })
 
-Editor<Terrain>::Editor(Terrain& terrain)
+EditorInspector<Terrain>::EditorInspector(Terrain& terrain)
     : m_terrain(terrain)
 {
     SetTitle("Terrain");
@@ -12,7 +12,7 @@ Editor<Terrain>::Editor(Terrain& terrain)
     m_heightmapDstPath = "/assets/tamriel_lowres.bin";
 }
 
-void Editor<Terrain>::OnGui()
+void EditorInspector<Terrain>::OnGui()
 {
     if (ImGui::CollapsingHeader("Inspector", ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -66,7 +66,7 @@ void Editor<Terrain>::OnGui()
     }
 }
 
-void Editor<Terrain>::OnInspectGui(Terrain& terrain)
+void EditorInspector<Terrain>::OnInspectGui(Terrain& terrain)
 {
     i32 vs = terrain.m_vertexShader;
 

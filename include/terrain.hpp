@@ -79,7 +79,7 @@ public:
 
 private:
     template <typename T>
-	friend class Editor;
+	friend class EditorInspector;
 
     InputFileStream m_fileStream{};
 

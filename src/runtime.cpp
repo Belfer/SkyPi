@@ -1,4 +1,5 @@
 #include <engine/runtime.hpp>
+#include <engine/engine.hpp>
 
 #ifdef EDITOR_BUILD
 #include <editor/game_editor.hpp>
@@ -10,9 +11,9 @@ int RuntimeMain(int argc, char** args)
 {
 #ifdef EDITOR_BUILD
     SkyPiEditor editor;
-    return Application::Get().Run(argc, args, editor);
+    return Engine::Get().Run(argc, args, editor);
 #else
     SkyPiGame game;
-    return Application::Get().Run(argc, args, game);
+    return Engine::Get().Run(argc, args, game);
 #endif
 }

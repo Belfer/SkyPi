@@ -11,7 +11,7 @@ struct ConstantData
     Mat4 viewProjMtx{};
 };
 
-class SkyPiGame final : public Game
+class SkyPiGame final : public Application
 {
 public:
     SkyPiGame();

@@ -4,10 +4,10 @@
 #include <editor/editor.hpp>
 
 template <>
-class Editor<Terrain> final : public EditorView
+class EditorInspector<Terrain> final : public EditorWindow
 {
 public:
-	Editor(Terrain& terrain);
+	EditorInspector(Terrain& terrain);
 	void OnGui() override;
 
 	static void OnInspectGui(Terrain& terrain);
