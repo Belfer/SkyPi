@@ -1,5 +1,7 @@
 #include <terrain.hpp>
 
+#include <engine/guard.hpp>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -20,7 +22,7 @@ static Image LoadImage(StringView filename)
     }
     else if (stbi_is_hdr(filepath))
     {
-        FAIL("What to do with HDR?");
+        BX_FAIL("What to do with HDR?");
         image.is_16bit = false;
         image.is_hdr = true;
     }
@@ -271,7 +273,7 @@ void Terrain::Shutdown()
 void Terrain::Import(StringView srcPath, StringView dstPath)
 {
     Image heightmap = LoadImage(srcPath);
-    ENSURE(heightmap.is_16bit);
+    BX_ENSURE(heightmap.is_16bit);
 
     OutputFileStream outFile(File::Get().GetPath(dstPath), std::ios::binary);
 
@@ -315,7 +317,7 @@ void Terrain::Import(StringView srcPath, StringView dstPath)
                 }
             }
 
-            ENSURE(sampleCount > 0);
+            BX_ENSURE(sampleCount > 0);
             avgHeight /= sampleCount;
 
             outFile.write((char*)&cx, sizeof(i32));
@@ -385,8 +387,8 @@ void Terrain::CloseStream()
 
 void Terrain::ReadCell(u32 cx, u32 cy, Terrain::Cell& cell)
 {
-    ENSURE(m_fileStream.is_open());
-    ENSURE(cx < m_cellsX && cy < m_cellsY);
+    BX_ENSURE(m_fileStream.is_open());
+    BX_ENSURE(cx < m_cellsX && cy < m_cellsY);
 
     // Read cell data
     SeekCellData(m_fileStream, sizeof(Cell::HeightData), m_cellsX, cx, cy);
