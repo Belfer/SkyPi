@@ -1,5 +1,5 @@
 #include <editor/game_editor.hpp>
-#include <editor/terrain_view.hpp>
+//#include <editor/terrain_view.hpp>
 #include <engine/time.hpp>
 
 class SkyPiEditorView final : public EditorWindow

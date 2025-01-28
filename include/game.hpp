@@ -3,8 +3,9 @@
 #include <engine/application.hpp>
 #include <engine/graphics.hpp>
 #include <engine/math.hpp>
+#include <framework/camera.hpp>
 
-#include <terrain.hpp>
+//#include <terrain.hpp>
 
 struct ConstantData
 {
@@ -38,5 +39,5 @@ private:
     Camera m_camera;
 
     // Terrain data
-    Terrain m_terrain;
+    //Terrain m_terrain;
 };

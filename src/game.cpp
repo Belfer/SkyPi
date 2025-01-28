@@ -15,21 +15,21 @@ void SkyPiGame::Configure()
 bool SkyPiGame::Initialize()
 {
     // Create global buffer
-    {
-        BufferInfo bufferInfo;
-        bufferInfo.type = BufferType::UNIFORM_BUFFER;
-        bufferInfo.usage = BufferUsage::DYNAMIC;
-        bufferInfo.access = BufferAccess::WRITE;
-
-        BufferData bufferData;
-        bufferData.dataSize = 0;
-        bufferData.pData = nullptr;
-
-        m_constantBuffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);
-    }
-
-    m_terrain.Initialize();
-    Graphics::Get().BindResource(m_terrain.GetResources(), "ConstantBuffer", m_constantBuffer);
+    //{
+    //    BufferInfo bufferInfo;
+    //    bufferInfo.type = BufferType::UNIFORM_BUFFER;
+    //    bufferInfo.usage = BufferUsage::DYNAMIC;
+    //    bufferInfo.access = BufferAccess::WRITE;
+    //
+    //    BufferData bufferData;
+    //    bufferData.dataSize = 0;
+    //    bufferData.pData = nullptr;
+    //
+    //    m_constantBuffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);
+    //}
+    //
+    //m_terrain.Initialize();
+    //Graphics::Get().BindResource(m_terrain.GetResources(), "ConstantBuffer", m_constantBuffer);
 
     return true;
 }
@@ -76,9 +76,8 @@ void SkyPiGame::Update()
     m_camera.SetView(Mat4::LookAt(m_cameraPos, m_cameraPos + camRot * Vec3::Forward(), Vec3::Up()));
     m_camera.Update();
 
-    m_constantData.viewProjMtx = m_camera.GetViewProjection();
-
-    m_terrain.Update(m_camera);
+    //m_constantData.viewProjMtx = m_camera.GetViewProjection();
+    //m_terrain.Update(m_camera);
 }
 
 static void DrawXZGrid(const Vec3& cameraPos, f32 zfar)
@@ -140,12 +139,12 @@ void SkyPiGame::Render()
     DrawXZGrid(m_cameraPos, 5000.f);
     DebugDraw::Get().Line(Vec3(0, 0, 0), Vec3(1, 0, 1), 0xFFFFFFFF); // Z-axis
 
-    BufferData bufferData;
-    bufferData.dataSize = sizeof(ConstantData);
-    bufferData.pData = &m_constantData;
-    Graphics::Get().UpdateBuffer(m_constantBuffer, bufferData);
-    
-    m_terrain.Render(m_camera);
+    //BufferData bufferData;
+    //bufferData.dataSize = sizeof(ConstantData);
+    //bufferData.pData = &m_constantData;
+    //Graphics::Get().UpdateBuffer(m_constantBuffer, bufferData);
+    //
+    //m_terrain.Render(m_camera);
 
 #if defined(EDITOR_BUILD) || defined(DEBUG_BUILD)
     DebugDraw::Get().Render(m_camera.GetViewProjection());
@@ -154,6 +153,6 @@ void SkyPiGame::Render()
 
 void SkyPiGame::Shutdown()
 {
-    Graphics::Get().DestroyBuffer(m_constantBuffer);
-    m_terrain.Shutdown();
+    //Graphics::Get().DestroyBuffer(m_constantBuffer);
+    //m_terrain.Shutdown();
 }
