@@ -131,11 +131,11 @@ static constexpr IndexArray<LOD>& GetIndices()
 {\
     const auto& indices = GetIndices<LOD>();\
     BufferData bufferData;\
-    bufferData.dataSize = sizeof(u16) * indices.size();\
+    bufferData.dataSize = sizeof(u16) * (u16)indices.size();\
     bufferData.pData = indices.data();\
     auto& indexBuffer = m_indexBuffers[LOD];\
     indexBuffer.buffer = Graphics::Get().CreateBuffer(bufferInfo, bufferData);\
-    indexBuffer.count = indices.size();\
+    indexBuffer.count = (u32)indices.size();\
 }
 
 void Terrain::Initialize()

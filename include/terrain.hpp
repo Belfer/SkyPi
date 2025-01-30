@@ -10,7 +10,7 @@
 #include <framework/image.hpp>
 #include <framework/camera.hpp>
 
-#include <pga3d.hpp>
+//#include <pga3d.hpp>
 
 struct TerrainDrawData
 {
