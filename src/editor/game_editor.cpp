@@ -1,40 +1,10 @@
 #include <editor/game_editor.hpp>
-//#include <editor/terrain_view.hpp>
-#include <engine/time.hpp>
 
-class SkyPiEditorView final : public EditorWindow
+#include <engine/engine.hpp>
+
+bool SkyPiEditor::CanAddScene()
 {
-public:
-    SkyPiEditorView();
-    void OnGui() override;
-
-private:
-    f32 m_timer{ 1.f };
-    i32 m_frames{ 0 };
-    i32 m_fps{ 0 };
-};
-
-SkyPiEditorView::SkyPiEditorView()
-{
-    SetTitle("SkyPi");
-    SetPresistent(true);
-    SetExclusive(true);
-}
-
-void SkyPiEditorView::OnGui()
-{
-    m_frames++;
-    m_timer += Time::Get().DeltaTime();
-    if (m_timer >= 1.f)
-    {
-        m_fps = (i32)(m_frames / m_timer);
-        m_frames = 0;
-        m_timer = Math::FMod(m_timer, 1.f);
-    }
-
-    CString<64> fps;
-    fps.format("FPS: {}", m_fps);
-    ImGui::Text(fps);
+    return true;
 }
 
 void SkyPiEditor::Configure()
@@ -68,7 +38,8 @@ void SkyPiEditor::OnMainMenuBar()
         if (ImGui::MenuItem("New")) {}
         if (ImGui::MenuItem("Open")) {}
         ImGui::Separator();
-        if (ImGui::MenuItem("Exit")) {}
+        if (ImGui::MenuItem("Exit"))
+            Engine::Get().Close();
         ImGui::EndMenu();
     }
 

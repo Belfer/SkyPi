@@ -12,7 +12,7 @@ EditorInspector<Terrain>::EditorInspector(Terrain& terrain)
     m_heightmapDstPath = "/assets/tamriel_lowres.bin";
 }
 
-void EditorInspector<Terrain>::OnGui()
+void EditorInspector<Terrain>::OnGui(EditorApplication& app)
 {
     if (ImGui::CollapsingHeader("Inspector", ImGuiTreeNodeFlags_DefaultOpen))
     {

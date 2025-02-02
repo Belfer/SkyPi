@@ -8,7 +8,7 @@ class EditorInspector<Terrain> final : public EditorWindow
 {
 public:
 	EditorInspector(Terrain& terrain);
-	void OnGui() override;
+	void OnGui(EditorApplication& app) override;
 
 	static void OnInspectGui(Terrain& terrain);
 

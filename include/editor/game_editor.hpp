@@ -6,6 +6,8 @@
 class SkyPiEditor final : public EditorApplication
 {
 public:
+	bool CanAddScene() override;
+
 	void Configure() override;
 	bool Initialize() override;
 	void Update() override;

@@ -1,6 +1,7 @@
 #include <terrain.hpp>
 
 #include <engine/guard.hpp>
+#include <engine/debug.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -524,7 +525,7 @@ void Terrain::Render(const Camera& camera)
     for (const auto& cell : m_cells)
     {
         if (m_debugDraw)
-            DebugDraw::Get().Box(cell.aabb, 0xFFFFFFFF);
+            Debug::Get().DrawBox(cell.aabb, 0xFFFFFFFF);
 
         if (cell.vertexBuffer == INVALID_GRAPHICS_HANDLE)
             continue;
