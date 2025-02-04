@@ -21,8 +21,8 @@ void SkyPiGame::Configure()
 
 bool SkyPiGame::Initialize()
 {
-    m_gameScene = CreateScene<World>();
-    SetActiveScene(m_gameScene);
+    //m_gameScene = CreateScene<World>();
+    //SetActiveScene(m_gameScene);
 
     return true;
 }
