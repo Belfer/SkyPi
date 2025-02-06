@@ -12,7 +12,7 @@
 
 static Image LoadImage(StringView filename)
 {
-    CString<512> filepath = File::Get().GetPath(filename);
+    const auto filepath = File::Get().GetPath(filename);
 
     Image image{};
     if (stbi_is_16_bit(filepath))
@@ -38,7 +38,7 @@ static Image LoadImage(StringView filename)
 
 static void SaveImage(StringView filename, const Image& image)
 {
-    CString<512> filepath = File::Get().GetPath(filename);
+    const auto filepath = File::Get().GetPath(filename);
 }
 
 static void UnloadImage(const Image& image)
@@ -56,7 +56,7 @@ Terrain::~Terrain()
 
 static String LoadText(StringView filename)
 {
-    const CString<512> filepath = File::Get().GetPath(filename);
+    const auto filepath = File::Get().GetPath(filename);
     std::ifstream file(filepath.c_str(), std::ios::in);
     if (!file.is_open())
     {
@@ -343,7 +343,7 @@ static void SeekCellData(InputFileStream& stream, u32 stride, i32 cellsX, i32 cx
 
 void Terrain::OpenStream(StringView heightmapPath)
 {
-    CString<512> filepath = File::Get().GetPath(heightmapPath);
+    const auto filepath = File::Get().GetPath(heightmapPath);
     m_fileStream.open(filepath, std::ios::binary);
 
     m_fileStream.seekg(0);

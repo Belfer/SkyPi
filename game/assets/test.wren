@@ -6,5 +6,3 @@ class Test {
 	update() { System.print("Update") }
 	render() { System.print("Render") }
 }
-
-return Test
