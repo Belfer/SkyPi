@@ -1,48 +1,22 @@
 project (SkyPi)
 
-add_compile_definitions (GAME_PATH="${CMAKE_CURRENT_SOURCE_DIR}/game")
+set (BX_GAME_NAME "${PROJECT_NAME}")
+set (BX_GAME_PATH "${CMAKE_CURRENT_SOURCE_DIR}/game")
+set (BX_GAME_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set (BX_GAME_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/game/assets/icon/bx.rc")
 
-add_subdirectory (extern)
-
-set (GAME_SRCS
-	"src/game.cpp"
-	"src/terrain.cpp"
+set (BX_GAME_SRCS
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/game.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/terrain.cpp"
 )
 
-if (BX_BUILD_EDITOR)
-	set (GAME_SRCS ${GAME_SRCS}
-		"src/editor/game_editor.cpp"
-		"src/editor/terrain_view.cpp"
-	)
-endif()
+set (BX_GAME_EDITOR_SRCS
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/editor/game_editor.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/editor/terrain_view.cpp"
+)
 
-# We need the -WHOLEARCHIVE to avoid static compile optimize away
-set (GAME_LIBS Engine -WHOLEARCHIVE:$<TARGET_FILE:Engine>)
+set (BX_GAME_RUNTIME_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime.cpp")
 
-add_library (Game STATIC ${GAME_SRCS})
-target_link_libraries (Game ${GAME_LIBS})
-target_include_directories (Game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set (BX_GAME_LIBS )
 
-#if(WIN32)
-#	add_executable (bx-editor "assets/icon.rc" ${GAME_SRCS})
-#elseif(APPLE)
-#elseif(UNIX)
-#else()
-	add_executable (SkyPi "src/runtime")
-#endif()
-
-target_link_libraries (SkyPi Game -WHOLEARCHIVE:$<TARGET_FILE:Game>)
-
-# TODO: We need to make this get copied to the exe bin from the engine lib (HOW?? Idk)
-if (WIN32)
-	# We need to copy steam dll to the exe bin on windows
-	if (BX_ONLINE_BACKEND STREQUAL "Steam" AND STEAMWORKS_FOUND)
-		# Iterate through all executables and copy the DLL to each one
-		add_custom_command(
-			TARGET Game POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				${STEAMWORKS_DLL_PATH} $<TARGET_FILE_DIR:Game>
-			COMMENT "Copying Steamworks DLL to the executable output directory"
-		)
-	endif()
-endif()
+add_subdirectory (extern)

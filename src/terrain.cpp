@@ -180,7 +180,7 @@ void Terrain::Initialize()
 
         ResourceBindingInfo resourceBindingInfo;
         resourceBindingInfo.resources = resourceElems;
-        resourceBindingInfo.numResources = ARRAYSIZE(resourceElems);
+        resourceBindingInfo.numResources = BX_ARRAYSIZE(resourceElems);
 
         m_resources = Graphics::Get().CreateResourceBinding(resourceBindingInfo);
         Graphics::Get().BindResource(m_resources, "DrawBuffer", m_drawBuffer);
@@ -202,7 +202,7 @@ void Terrain::Initialize()
         };
 
         pipeInfo.layoutElements = layoutElems;
-        pipeInfo.numElements = ARRAYSIZE(layoutElems);
+        pipeInfo.numElements = BX_ARRAYSIZE(layoutElems);
 
         pipeInfo.vertShader = m_vertexShader;
         pipeInfo.pixelShader = m_pixelShader;

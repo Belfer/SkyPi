@@ -14,7 +14,7 @@ public:
 	void Render() override;
 	void Shutdown() override;
 
-	void OnMainMenuBar() override;
+	void OnMainMenuBarGui() override;
 
 private:
 	SkyPiGame m_game;

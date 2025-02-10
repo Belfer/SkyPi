@@ -1,0 +1,26 @@
+[
+    {
+        "@type": "circle",
+        "visible": true,
+        "color": "red",
+        "name": "Circle #1",
+        "position": {
+            "@type": "point2d",
+            "x": 12,
+            "y": 66
+        },
+        "radius": 5.123
+    },
+    {
+        "@type": "circle",
+        "visible": true,
+        "color": "red",
+        "name": "Circle #1",
+        "position": {
+            "@type": "point2d",
+            "x": 12,
+            "y": 66
+        },
+        "radius": 5.123
+    }
+]
