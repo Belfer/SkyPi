@@ -1,18 +1,25 @@
 #include <game.hpp>
+
 #include <engine/window.hpp>
 #include <engine/time.hpp>
 #include <engine/debug.hpp>
+
 #include <framework/world.hpp>
 
 #include <engine/serial.hpp>
+#include <engine/memory.hpp>
+#include <engine/file.hpp>
+
+#include <cereal/archives/json.hpp>
+#include <fstream>
 
 using namespace rttr;
 
 enum class color
 {
-    red,
-    green,
-    blue
+    red = 1,
+    green = 2,
+    blue = 3
 };
 
 struct point2d
@@ -66,7 +73,7 @@ RTTR_REGISTRATION
     ;
 
     rttr::registration::class_<circle>("circle")
-        .constructor()(rttr::policy::ctor::as_object)
+        .constructor()(rttr::policy::ctor::as_std_shared_ptr)
         .property("radius", &circle::radius)
         //.property("points", &circle::points)
         .property("no_serialize", &circle::no_serialize)
@@ -88,6 +95,10 @@ RTTR_REGISTRATION
             value("blue", color::blue),
             value("green", color::green)
         );
+
+    //https://github.com/rttrorg/rttr/issues/81
+    //https://github.com/rttrorg/rttr/pull/132
+    rttr::type::register_wrapper_converter_for_base_classes<SharedPtr<circle>>();
 }
 
 SkyPiGame::SkyPiGame()
@@ -102,6 +113,9 @@ bool SkyPiGame::CanAddScene()
 void SkyPiGame::Configure()
 {
     {
+        std::ofstream os(File::Get().GetPath("[assets]/data.json"));
+        cereal::JSONOutputArchive archive(os);
+
         circle c_1("Circle #1");
         shape& my_shape = c_1;
 
@@ -113,7 +127,7 @@ void SkyPiGame::Configure()
         c_1.position.x = 12;
         c_1.position.y = 66;
 
-        c_1.radius = 5.123;
+        c_1.radius = 15.123;
         c_1.color_ = color::red;
 
         // additional braces are needed for a VS 2013 bug
@@ -121,23 +135,25 @@ void SkyPiGame::Configure()
 
         c_1.no_serialize = 12345;
 
-        std::vector<shape*> shapes{};
-        shapes.push_back(new circle(c_1));
-        shapes.push_back(new circle(c_1));
+        //List<SharedPtr<shape>> shapes{};
+        //shapes.emplace_back(new circle(c_1));
+        //shapes.emplace_back(new circle(c_1));
+        //archive(cereal::make_nvp("shapes", shapes));
 
-        Serial::Save(shapes, "[assets]/test.json"); // serialize the circle to 'json_string'
+        SharedPtr<shape> obj{ new circle(c_1) };
+        archive(cereal::make_nvp("shape", obj));
     }
 
-    //std::cout << "Circle: c_1:\n" << json_string << std::endl;
-    
-    //circle c_2("Circle #2"); // create a new empty circle
-    //shape& my_shape = c_2;
-    
-    std::vector<shape*> shapes{};
-    Serial::Load(shapes, "[assets]/test.json"); // deserialize it with the content of 'c_1'
-    //std::cout << "\n############################################\n" << std::endl;
-    //
-    //std::cout << "Circle c_2:\n" << io::to_json(c_2) << std::endl;
+    {
+        std::ifstream is(File::Get().GetPath("[assets]/data.json"));
+        cereal::JSONInputArchive archive(is);
+
+        //List<SharedPtr<shape>> shapes{};
+        //archive(cereal::make_nvp("shapes", shapes));
+
+        SharedPtr<shape> obj{};
+        archive(cereal::make_nvp("shape", obj));
+    }
 }
 
 bool SkyPiGame::Initialize()

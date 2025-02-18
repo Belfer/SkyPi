@@ -1,6 +1,6 @@
 [
     {
-        "@type": "circle",
+        "@type": "classstd::shared_ptr<structshape>",
         "visible": true,
         "color": "red",
         "name": "Circle #1",
@@ -12,7 +12,7 @@
         "radius": 5.123
     },
     {
-        "@type": "circle",
+        "@type": "classstd::shared_ptr<structshape>",
         "visible": true,
         "color": "red",
         "name": "Circle #1",
