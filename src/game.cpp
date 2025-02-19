@@ -54,7 +54,7 @@ struct circle : shape
     circle(std::string n) : shape(n) {}
 
     double radius = 5.2;
-    //std::vector<point2d> points;
+    std::vector<point2d> points;
 
     int no_serialize = 100;
 
@@ -75,7 +75,7 @@ RTTR_REGISTRATION
     rttr::registration::class_<circle>("circle")
         .constructor()(rttr::policy::ctor::as_std_shared_ptr)
         .property("radius", &circle::radius)
-        //.property("points", &circle::points)
+        .property("points", &circle::points)
         .property("no_serialize", &circle::no_serialize)
         (
             metadata("NO_SERIALIZE", true)
@@ -120,9 +120,9 @@ void SkyPiGame::Configure()
         shape& my_shape = c_1;
 
         c_1.set_visible(true);
-        //c_1.points = std::vector<point2d>(2, point2d(1, 1));
-        //c_1.points[1].x = 23;
-        //c_1.points[1].y = 42;
+        c_1.points = std::vector<point2d>(2, point2d(1, 1));
+        c_1.points[1].x = 23;
+        c_1.points[1].y = 42;
 
         c_1.position.x = 12;
         c_1.position.y = 66;
@@ -135,24 +135,38 @@ void SkyPiGame::Configure()
 
         c_1.no_serialize = 12345;
 
-        //List<SharedPtr<shape>> shapes{};
-        //shapes.emplace_back(new circle(c_1));
-        //shapes.emplace_back(new circle(c_1));
-        //archive(cereal::make_nvp("shapes", shapes));
+        //List<SharedPtr<shape>> obj{};
+        //obj.emplace_back(new circle(c_1));
+        //obj.emplace_back(new circle(c_1));
+        //archive(cereal::make_nvp("shape", obj));
 
         SharedPtr<shape> obj{ new circle(c_1) };
         archive(cereal::make_nvp("shape", obj));
+
+        {
+            std::stringstream os{};
+            cereal::JSONOutputArchive oa(os);
+            oa(cereal::make_nvp("shape", obj));
+            BX_LOGI(Log, "save:\n{}", os.str());
+        }
     }
 
     {
         std::ifstream is(File::Get().GetPath("[assets]/data.json"));
         cereal::JSONInputArchive archive(is);
 
-        //List<SharedPtr<shape>> shapes{};
-        //archive(cereal::make_nvp("shapes", shapes));
+        //List<SharedPtr<shape>> obj{};
+        //archive(cereal::make_nvp("shape", obj));
 
         SharedPtr<shape> obj{};
         archive(cereal::make_nvp("shape", obj));
+
+        {
+            std::stringstream os{};
+            cereal::JSONOutputArchive oa(os);
+            oa(cereal::make_nvp("shape", obj));
+            BX_LOGI(Log, "load:\n{}", os.str());
+        }
     }
 }
 
