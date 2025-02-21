@@ -61,6 +61,17 @@ struct circle : shape
     RTTR_ENABLE(shape)
 };
 
+struct rect : shape
+{
+    rect() {}
+    rect(std::string n) : shape(n) {}
+
+    double width = 5.2;
+    double height = 5.2;
+
+    RTTR_ENABLE(shape)
+};
+
 RTTR_REGISTRATION
 {
     rttr::registration::class_<shape>("shape")
@@ -82,6 +93,12 @@ RTTR_REGISTRATION
         )
         ;
 
+    rttr::registration::class_<rect>("rect")
+        .constructor()(rttr::policy::ctor::as_std_shared_ptr)
+        .property("width", &rect::width)
+        .property("height", &rect::height)
+        ;
+
     rttr::registration::class_<point2d>("point2d")
         .constructor()(rttr::policy::ctor::as_object)
         .property("x", &point2d::x)
@@ -99,6 +116,7 @@ RTTR_REGISTRATION
     //https://github.com/rttrorg/rttr/issues/81
     //https://github.com/rttrorg/rttr/pull/132
     rttr::type::register_wrapper_converter_for_base_classes<SharedPtr<circle>>();
+    rttr::type::register_wrapper_converter_for_base_classes<SharedPtr<rect>>();
 }
 
 SkyPiGame::SkyPiGame()
@@ -116,37 +134,35 @@ void SkyPiGame::Configure()
         std::ofstream os(File::Get().GetPath("[assets]/data.json"));
         cereal::JSONOutputArchive archive(os);
 
-        circle c_1("Circle #1");
-        shape& my_shape = c_1;
-
-        c_1.set_visible(true);
-        c_1.points = std::vector<point2d>(2, point2d(1, 1));
-        c_1.points[1].x = 23;
-        c_1.points[1].y = 42;
-
-        c_1.position.x = 12;
-        c_1.position.y = 66;
-
-        c_1.radius = 15.123;
-        c_1.color_ = color::red;
-
+        SharedPtr<circle> s1{ new circle("Circle #1") };
+        s1->set_visible(true);
+        s1->points = std::vector<point2d>(2, point2d(1, 1));
+        s1->points[1].x = 23;
+        s1->points[1].y = 42;
+        s1->position.x = 12;
+        s1->position.y = 66;
+        s1->radius = 15.123;
+        s1->color_ = color::red;
         // additional braces are needed for a VS 2013 bug
-        //c_1.dictionary = { { {color::green, {1, 2} }, {color::blue, {3, 4} }, {color::red, {5, 6} } } };
+        //s1.dictionary = { { {color::green, {1, 2} }, {color::blue, {3, 4} }, {color::red, {5, 6} } } };
+        s1->no_serialize = 12345;
 
-        c_1.no_serialize = 12345;
+        SharedPtr<rect> s2{ new rect("Rect #2") };
+        s2->width = 10;
+        s2->height = 20;
 
-        //List<SharedPtr<shape>> obj{};
-        //obj.emplace_back(new circle(c_1));
-        //obj.emplace_back(new circle(c_1));
-        //archive(cereal::make_nvp("shape", obj));
+        List<SharedPtr<shape>> obj{};
+        obj.emplace_back(s1);
+        obj.emplace_back(s2);
+        archive(cereal::make_nvp("shapes", obj));
 
-        SharedPtr<shape> obj{ new circle(c_1) };
-        archive(cereal::make_nvp("shape", obj));
+        //SharedPtr<shape> obj{ new circle(c_1) };
+        //archive(cereal::make_nvp("shapes", obj));
 
         {
             std::stringstream os{};
             cereal::JSONOutputArchive oa(os);
-            oa(cereal::make_nvp("shape", obj));
+            oa(cereal::make_nvp("shapes", obj));
             BX_LOGI(Log, "save:\n{}", os.str());
         }
     }
@@ -155,16 +171,16 @@ void SkyPiGame::Configure()
         std::ifstream is(File::Get().GetPath("[assets]/data.json"));
         cereal::JSONInputArchive archive(is);
 
-        //List<SharedPtr<shape>> obj{};
-        //archive(cereal::make_nvp("shape", obj));
+        List<SharedPtr<shape>> obj{};
+        archive(cereal::make_nvp("shapes", obj));
 
-        SharedPtr<shape> obj{};
-        archive(cereal::make_nvp("shape", obj));
+        //SharedPtr<shape> obj{};
+        //archive(cereal::make_nvp("shape", obj));
 
         {
             std::stringstream os{};
             cereal::JSONOutputArchive oa(os);
-            oa(cereal::make_nvp("shape", obj));
+            oa(cereal::make_nvp("shapes", obj));
             BX_LOGI(Log, "load:\n{}", os.str());
         }
     }
