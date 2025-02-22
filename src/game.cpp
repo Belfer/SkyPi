@@ -84,7 +84,7 @@ RTTR_REGISTRATION
         .property("points", &circle::points)
         .property("no_serialize", &circle::no_serialize)
         (
-            metadata("NO_SERIALIZE", true)
+            metadata(rttr::serial::tags::no_serialize, true)
         )
         ;
 
