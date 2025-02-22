@@ -7,11 +7,6 @@
 #include <framework/world.hpp>
 
 #include <engine/serial.hpp>
-#include <engine/memory.hpp>
-#include <engine/file.hpp>
-
-#include <cereal/archives/json.hpp>
-#include <fstream>
 
 using namespace rttr;
 
@@ -131,8 +126,8 @@ bool SkyPiGame::CanAddScene()
 void SkyPiGame::Configure()
 {
     {
-        std::ofstream os(File::Get().GetPath("[assets]/data.json"));
-        cereal::JSONOutputArchive archive(os);
+        auto stream = File::Get().OutputStream("[assets]/data.json");
+        cereal::JSONOutputArchive archive(stream);
 
         SharedPtr<circle> s1{ new circle("Circle #1") };
         s1->set_visible(true);
@@ -155,33 +150,33 @@ void SkyPiGame::Configure()
         obj.emplace_back(s1);
         obj.emplace_back(s2);
         archive(cereal::make_nvp("shapes", obj));
-
-        //SharedPtr<shape> obj{ new circle(c_1) };
-        //archive(cereal::make_nvp("shapes", obj));
+        archive(cereal::make_nvp("shape", s1));
 
         {
-            std::stringstream os{};
-            cereal::JSONOutputArchive oa(os);
-            oa(cereal::make_nvp("shapes", obj));
-            BX_LOGI(Log, "save:\n{}", os.str());
+            StringStream ss{};
+            cereal::JSONOutputArchive a(ss);
+            a(cereal::make_nvp("shapes", obj));
+            a(cereal::make_nvp("shape", s1));
+            BX_LOGI(Log, "save:\n{}", ss.str());
         }
     }
 
     {
-        std::ifstream is(File::Get().GetPath("[assets]/data.json"));
-        cereal::JSONInputArchive archive(is);
+        auto stream = File::Get().InputStream("[assets]/data.json");
+        cereal::JSONInputArchive archive(stream);
 
         List<SharedPtr<shape>> obj{};
         archive(cereal::make_nvp("shapes", obj));
 
-        //SharedPtr<shape> obj{};
-        //archive(cereal::make_nvp("shape", obj));
+        SharedPtr<shape> s1{};
+        archive(cereal::make_nvp("shape", s1));
 
         {
-            std::stringstream os{};
-            cereal::JSONOutputArchive oa(os);
-            oa(cereal::make_nvp("shapes", obj));
-            BX_LOGI(Log, "load:\n{}", os.str());
+            StringStream ss{};
+            cereal::JSONOutputArchive a(ss);
+            a(cereal::make_nvp("shapes", obj));
+            a(cereal::make_nvp("shape", s1));
+            BX_LOGI(Log, "load:\n{}", ss.str());
         }
     }
 }
