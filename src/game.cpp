@@ -61,6 +61,8 @@ struct rect : shape
     rect() {}
     rect(std::string n) : shape(n) {}
 
+    std::map<std::string, SharedPtr<shape>> children;
+
     double width = 5.2;
     double height = 5.2;
 
@@ -70,7 +72,7 @@ struct rect : shape
 RTTR_REGISTRATION
 {
     rttr::registration::class_<shape>("shape")
-        .constructor()(rttr::policy::ctor::as_object)
+        .constructor()(rttr::policy::ctor::as_std_shared_ptr)
         .property("visible", &shape::get_visible, &shape::set_visible)
         .property("color", &shape::color_)
         .property("name", &shape::name)
@@ -92,6 +94,7 @@ RTTR_REGISTRATION
         .constructor()(rttr::policy::ctor::as_std_shared_ptr)
         .property("width", &rect::width)
         .property("height", &rect::height)
+        .property("children", &rect::children)
         ;
 
     rttr::registration::class_<point2d>("point2d")
@@ -145,6 +148,8 @@ void SkyPiGame::Configure()
         SharedPtr<rect> s2{ new rect("Rect #2") };
         s2->width = 10;
         s2->height = 20;
+        s2->children.insert(std::make_pair("Child 1", new circle()));
+        s2->children.insert(std::make_pair("Child 2", new rect()));
 
         List<SharedPtr<shape>> obj{};
         obj.emplace_back(s1);
@@ -157,7 +162,7 @@ void SkyPiGame::Configure()
             cereal::JSONOutputArchive a(ss);
             a(cereal::make_nvp("shapes", obj));
             a(cereal::make_nvp("shape", s1));
-            //BX_LOGI(Log, "save:\n{}", ss.str());
+            BX_LOGI(Log, "save:\n{}", ss.str());
         }
     }
 
@@ -176,7 +181,7 @@ void SkyPiGame::Configure()
             cereal::JSONOutputArchive a(ss);
             a(cereal::make_nvp("shapes", obj));
             a(cereal::make_nvp("shape", s1));
-            //BX_LOGI(Log, "load:\n{}", ss.str());
+            BX_LOGI(Log, "load:\n{}", ss.str());
         }
     }
 }

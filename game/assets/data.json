@@ -81,7 +81,52 @@
             },
             "dictionary": [],
             "width": 10.0,
-            "height": 20.0
+            "height": 20.0,
+            "children": [
+                {
+                    "key": {
+                        "value0": "Child 1"
+                    },
+                    "value": {
+                        "@type": "circle",
+                        "visible": false,
+                        "color": {
+                            "enum_str": "blue",
+                            "enum_val": 3
+                        },
+                        "name": "",
+                        "position": {
+                            "x": 0,
+                            "y": 0
+                        },
+                        "dictionary": [],
+                        "radius": 5.2,
+                        "points": []
+                    }
+                },
+                {
+                    "key": {
+                        "value0": "Child 2"
+                    },
+                    "value": {
+                        "@type": "rect",
+                        "visible": false,
+                        "color": {
+                            "enum_str": "blue",
+                            "enum_val": 3
+                        },
+                        "name": "",
+                        "position": {
+                            "x": 0,
+                            "y": 0
+                        },
+                        "dictionary": [],
+                        "width": 5.2,
+                        "height": 5.2,
+                        "children": []
+                    }
+                }
+            ]
         }
     ],
     "shape": {
