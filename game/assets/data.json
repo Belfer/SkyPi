@@ -12,6 +12,47 @@
                 "x": 12,
                 "y": 66
             },
+            "dictionary": [
+                {
+                    "key": {
+                        "value0": {
+                            "enum_str": "red",
+                            "enum_val": 1
+                        }
+                    },
+                    "value": {
+                        "@type": "point2d",
+                        "x": 5,
+                        "y": 6
+                    }
+                },
+                {
+                    "key": {
+                        "value0": {
+                            "enum_str": "green",
+                            "enum_val": 2
+                        }
+                    },
+                    "value": {
+                        "@type": "point2d",
+                        "x": 1,
+                        "y": 2
+                    }
+                },
+                {
+                    "key": {
+                        "value0": {
+                            "enum_str": "blue",
+                            "enum_val": 3
+                        }
+                    },
+                    "value": {
+                        "@type": "point2d",
+                        "x": 3,
+                        "y": 4
+                    }
+                }
+            ],
             "radius": 15.123,
             "points": [
                 {
@@ -38,6 +79,7 @@
                 "x": 0,
                 "y": 0
             },
+            "dictionary": [],
             "width": 10.0,
             "height": 20.0
         }
@@ -54,6 +96,47 @@
             "x": 12,
             "y": 66
         },
+        "dictionary": [
+            {
+                "key": {
+                    "value0": {
+                        "enum_str": "red",
+                        "enum_val": 1
+                    }
+                },
+                "value": {
+                    "@type": "point2d",
+                    "x": 5,
+                    "y": 6
+                }
+            },
+            {
+                "key": {
+                    "value0": {
+                        "enum_str": "green",
+                        "enum_val": 2
+                    }
+                },
+                "value": {
+                    "@type": "point2d",
+                    "x": 1,
+                    "y": 2
+                }
+            },
+            {
+                "key": {
+                    "value0": {
+                        "enum_str": "blue",
+                        "enum_val": 3
+                    }
+                },
+                "value": {
+                    "@type": "point2d",
+                    "x": 3,
+                    "y": 4
+                }
+            }
+        ],
         "radius": 15.123,
         "points": [
             {

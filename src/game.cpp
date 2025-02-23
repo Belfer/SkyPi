@@ -36,7 +36,7 @@ struct shape
     color color_ = color::blue;
     std::string name = "";
     point2d position;
-    //std::map<color, point2d> dictionary;
+    std::map<color, point2d> dictionary;
 
     RTTR_ENABLE()
 private:
@@ -75,7 +75,7 @@ RTTR_REGISTRATION
         .property("color", &shape::color_)
         .property("name", &shape::name)
         .property("position", &shape::position)
-        //.property("dictionary", &shape::dictionary)
+        .property("dictionary", &shape::dictionary)
     ;
 
     rttr::registration::class_<circle>("circle")
@@ -139,7 +139,7 @@ void SkyPiGame::Configure()
         s1->radius = 15.123;
         s1->color_ = color::red;
         // additional braces are needed for a VS 2013 bug
-        //s1.dictionary = { { {color::green, {1, 2} }, {color::blue, {3, 4} }, {color::red, {5, 6} } } };
+        s1->dictionary = { { {color::green, {1, 2} }, {color::blue, {3, 4} }, {color::red, {5, 6} } } };
         s1->no_serialize = 12345;
 
         SharedPtr<rect> s2{ new rect("Rect #2") };
@@ -157,7 +157,7 @@ void SkyPiGame::Configure()
             cereal::JSONOutputArchive a(ss);
             a(cereal::make_nvp("shapes", obj));
             a(cereal::make_nvp("shape", s1));
-            BX_LOGI(Log, "save:\n{}", ss.str());
+            //BX_LOGI(Log, "save:\n{}", ss.str());
         }
     }
 
@@ -176,7 +176,7 @@ void SkyPiGame::Configure()
             cereal::JSONOutputArchive a(ss);
             a(cereal::make_nvp("shapes", obj));
             a(cereal::make_nvp("shape", s1));
-            BX_LOGI(Log, "load:\n{}", ss.str());
+            //BX_LOGI(Log, "load:\n{}", ss.str());
         }
     }
 }
