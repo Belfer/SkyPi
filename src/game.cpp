@@ -10,11 +10,6 @@ SkyPiGame::SkyPiGame()
 {
 }
 
-bool SkyPiGame::CanAddScene()
-{
-    return true;
-}
-
 void SkyPiGame::Configure()
 {
 }

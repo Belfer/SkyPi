@@ -7,8 +7,6 @@ class SkyPiGame final : public Application
 public:
     SkyPiGame();
 
-    bool CanAddScene() override;
-
     void Configure() override;
     bool Initialize() override;
     void Update() override;
@@ -17,6 +15,4 @@ public:
     
 private:
     friend class SkyPiEditor;
-
-    SceneHandle m_gameScene{ SCENE_INVALID_HANDLE };
 };

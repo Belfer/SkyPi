@@ -2,11 +2,6 @@
 
 #include <engine/engine.hpp>
 
-bool SkyPiEditor::CanAddScene()
-{
-    return true;
-}
-
 void SkyPiEditor::Configure()
 {
     m_game.Configure();
