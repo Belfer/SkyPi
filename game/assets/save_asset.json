@@ -1,0 +1,12 @@
+{
+    "metadata": {
+        "uuid": 7480936907166731737,
+        "version": 1,
+        "assetPath": "[assets]/save_asset.json",
+        "importedPath": "",
+        "type": "TestAsset"
+    },
+    "data": {
+        "value": 64
+    }
+}
